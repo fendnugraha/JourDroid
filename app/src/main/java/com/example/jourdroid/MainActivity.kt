@@ -39,22 +39,16 @@ class MainActivity : ComponentActivity() {
                         // CONDITIONAL RENDERING (Saklar manual bolak-balik)
                         if (isLoggedIn) {
                             DashboardScreen(
+                                userName = authManager.getUserName(),   // 🔴 Ambil nama dari memori HP
+                                userEmail = authManager.getUserEmail(), // 🔴 Ambil email dari memori HP
                                 onLogoutClick = {
                                     authManager.clearAuth()
-
                                     Toast.makeText(this@MainActivity, "Logout Berhasil", Toast.LENGTH_SHORT).show()
-
-                                    // 2. Matikan saklar login agar layar kembali ke form Login
                                     isLoggedIn = false
                                 }
                             )
                         } else {
-                            LoginScreen(
-                                onLoginSuccess = {
-                                    // Hidupkan saklar login agar layar otomatis pindah ke Dashboard
-                                    isLoggedIn = true
-                                }
-                            )
+                            LoginScreen(onLoginSuccess = { isLoggedIn = true })
                         }
                     }
                 }

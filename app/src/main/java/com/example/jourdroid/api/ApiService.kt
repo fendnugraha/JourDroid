@@ -23,4 +23,10 @@ interface ApiService {
     @POST("api/logout")
     suspend fun logout(): retrofit2.Response<Unit>
 
+        // Tambahkan ini untuk test koneksi
+    @GET("api/android/test-connection")
+    suspend fun testConnection(): retrofit2.Response<Unit> // Cukup return status HTTP (e.g. 200 OK)
+
+        // ... endpoint login, logout, profile yang kemarin tetap sama ...
+
 }

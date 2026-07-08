@@ -20,4 +20,20 @@ class AuthManager(context: Context) {
     fun clearAuth() {
         sharedPref.edit { clear() }
     }
+
+    // Tambahkan ini di dalam class AuthManager
+    fun saveUserData(name: String, email: String) {
+        sharedPref.edit {
+            putString("USER_NAME", name)
+            putString("USER_EMAIL", email)
+        }
+    }
+
+    fun getUserName(): String {
+        return sharedPref.getString("USER_NAME", "User") ?: "User"
+    }
+
+    fun getUserEmail(): String {
+        return sharedPref.getString("USER_EMAIL", "") ?: ""
+    }
 }

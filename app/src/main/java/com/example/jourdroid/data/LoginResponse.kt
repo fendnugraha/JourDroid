@@ -9,7 +9,7 @@ data class LoginResponse (
 
 data class UserData (
     val id: Int,
-    val username: String,
+    val name: String,
     val email: String,
     val role: String
 )

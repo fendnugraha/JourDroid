@@ -26,11 +26,17 @@ import androidx.compose.ui.unit.dp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.utils.AuthManager
 import kotlinx.coroutines.launch
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) { // 🔴 1. SEKARANG SUDAH ADA PARAMETERNYA DI SINI
+fun LoginScreen(onLoginSuccess: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val authManager = remember { AuthManager(context) }
 
     Column(
         modifier = Modifier
@@ -42,6 +48,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) { // 🔴 1. SEKARANG SUDAH ADA PARA
         Text(text = "Welcome to Jourdroid", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
+        // ... Input Email & Password tetap sama ...
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -57,12 +64,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) { // 🔴 1. SEKARANG SUDAH ADA PARA
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        val context = LocalContext.current
-        val scope = rememberCoroutineScope()
-        val authManager = remember { AuthManager(context) }
-
+        // ================= TOMBOL LOGIN UTAMA =================
         Button(
             onClick = {
                 scope.launch {
@@ -73,13 +77,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit) { // 🔴 1. SEKARANG SUDAH ADA PARA
                         if (response.success && response.token != null) {
                             authManager.saveToken(response.token)
 
+                            // 🔴 AMBIL OBJECT USER DARI LOGINRESPONSE DAN SIMPAN KE HP
+                            response.user?.let { user ->
+                                authManager.saveUserData(user.name, user.email)
+                            }
+
                             Toast.makeText(context, "Login Sukses! Token disimpan.", Toast.LENGTH_SHORT).show()
-
-                            // 🔴 2. PANGGIL FUNGSI INI SUPAYA MAINACTIVITY TAHU KALAU LOGIN SUKSES
                             onLoginSuccess()
-
-                        } else {
-                            Toast.makeText(context, response.message, Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
                         Toast.makeText(context, "Koneksi Gagal: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -89,6 +93,35 @@ fun LoginScreen(onLoginSuccess: () -> Unit) { // 🔴 1. SEKARANG SUDAH ADA PARA
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Login")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ================= 🔴 TOMBOL TEST KONEKSI BARU =================
+        OutlinedButton(
+            onClick = {
+                scope.launch {
+                    try {
+                        Toast.makeText(context, "Mencoba menghubungkan ke server...", Toast.LENGTH_SHORT).show()
+
+                        val apiService = ApiClient.getApiService(context)
+                        val response = apiService.testConnection()
+
+                        if (response.isSuccessful) {
+                            Toast.makeText(context, "⚡ Terhubung! Server Laravel & Ngrok Aktif.", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "⚠️ Server merespon, tapi status: ${response.code()}", Toast.LENGTH_LONG).show()
+                        }
+                    } catch (e: Exception) {
+                        // Jika URL Ngrok salah atau Ngrok mati, akan langsung masuk ke sini
+                        Toast.makeText(context, "❌ Gagal Terhubung! Periksa kembali URL Ngrok di ApiClient.kt atau jalankan ngrok di Macbook.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Text("Test Koneksi ke API")
         }
     }
 }
