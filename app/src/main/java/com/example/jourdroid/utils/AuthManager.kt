@@ -42,6 +42,6 @@ class AuthManager(context: Context) {
 
     // 5. Fungsi Hapus Sesi Saat Logout
     fun clearAuth() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 }
