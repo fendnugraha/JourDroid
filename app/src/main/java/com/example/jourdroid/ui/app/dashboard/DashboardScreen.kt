@@ -15,16 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.jourdroid.data.UserData
 import com.example.jourdroid.utils.BluetoothPrinterManager
 
 @Composable
 fun DashboardScreen(
-    userName: String,
-    userEmail: String,
+    user: UserData,
     onLogoutClick: () -> Unit
 ) {
     val context = LocalContext.current
     val printerManager = remember { BluetoothPrinterManager(context) }
+
+    val userName = user.name
+    val userEmail = user.email
+    val userRole = user.role?.role ?: "No Role"
+    val userWarehouseName = user.role?.warehouse?.name
 
     // State untuk memantau apakah izin Bluetooth sudah diberikan atau belum
     var hasBluetoothPermission by remember {
@@ -66,6 +71,8 @@ fun DashboardScreen(
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(text = "Selamat Datang, $userName", style = MaterialTheme.typography.headlineSmall)
                 Text(text = userEmail, style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Role: ${userRole}", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Warehouse: ${userWarehouseName}", style = MaterialTheme.typography.bodyMedium)
             }
         }
 

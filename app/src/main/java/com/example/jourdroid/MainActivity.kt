@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.example.jourdroid.data.UserData
 import com.example.jourdroid.ui.app.dashboard.DashboardScreen
 import com.example.jourdroid.ui.auth.LoginScreen
 import com.example.jourdroid.ui.theme.JourDroidTheme
@@ -25,9 +26,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             JourDroidTheme {
-                // State lokal untuk menentukan halaman mana yang aktif (Seperti di React)
                 var isLoggedIn by remember {
                     mutableStateOf(!authManager.getToken().isNullOrEmpty())
+                }
+
+                // 2. 🟢 INI DIA! State untuk mengambil data objek user dari AuthManager
+                var currentUser by remember {
+                    mutableStateOf<UserData?>(authManager.getUserData())
                 }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -37,18 +42,27 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding)
                     ) {
                         // CONDITIONAL RENDERING (Saklar manual bolak-balik)
-                        if (isLoggedIn) {
+                        val user = currentUser
+
+                        if (isLoggedIn && user != null) {
                             DashboardScreen(
-                                userName = authManager.getUserName(),   // 🔴 Ambil nama dari memori HP
-                                userEmail = authManager.getUserEmail(), // 🔴 Ambil email dari memori HP
+                                user = user, // 🔥 Sekarang semua data (Nama, Email, Warehouse ID) dikirim sekaligus dalam satu objek ini
                                 onLogoutClick = {
                                     authManager.clearAuth()
-                                    Toast.makeText(this@MainActivity, "Logout Berhasil", Toast.LENGTH_SHORT).show()
+                                    currentUser = null
                                     isLoggedIn = false
+                                    Toast.makeText(this@MainActivity, "Logout Berhasil", Toast.LENGTH_SHORT).show()
                                 }
                             )
                         } else {
-                            LoginScreen(onLoginSuccess = { isLoggedIn = true })
+                            LoginScreen(
+                                onLoginSuccess = { userResponse ->
+                                    // Saat login sukses, tangkap objek userResponse, lalu simpan ke HP dan update state
+                                    authManager.saveUserData(userResponse)
+                                    currentUser = userResponse
+                                    isLoggedIn = true
+                                }
+                            )
                         }
                     }
                 }

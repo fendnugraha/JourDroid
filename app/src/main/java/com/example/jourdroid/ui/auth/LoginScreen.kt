@@ -24,13 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.jourdroid.api.ApiClient
+import com.example.jourdroid.data.UserData
 import com.example.jourdroid.utils.AuthManager
 import kotlinx.coroutines.launch
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -79,11 +80,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                             // 🔴 AMBIL OBJECT USER DARI LOGINRESPONSE DAN SIMPAN KE HP
                             response.user?.let { user ->
-                                authManager.saveUserData(user.name, user.email)
+                                authManager.saveUserData(user)
+                                Toast.makeText(context, "Login Sukses! Token disimpan.", Toast.LENGTH_SHORT).show()
+                                onLoginSuccess(user)
                             }
-
-                            Toast.makeText(context, "Login Sukses! Token disimpan.", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess()
                         }
                     } catch (e: Exception) {
                         Toast.makeText(context, "Koneksi Gagal: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
