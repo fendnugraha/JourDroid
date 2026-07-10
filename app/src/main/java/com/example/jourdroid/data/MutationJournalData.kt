@@ -11,5 +11,8 @@ data class MutationJournalData (
 data class JournalData (
     val id: Int,
     @SerializedName("date_issued") val dateIssued: String,
+    val invoice: String,
+    val description: String,
+    @SerializedName("trx_type") val trxType: String,
     val amount: Int
 )

@@ -1,13 +1,11 @@
 package com.example.jourdroid.api
 
 import android.content.Context
-import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
-
 import com.example.jourdroid.utils.AuthManager
 
 object ApiClient {
@@ -20,7 +18,7 @@ object ApiClient {
             level = HttpLoggingInterceptor.Level.BODY
         }
         
-        val authManager = AuthManager(context)
+        val authManager = AuthManager(context.applicationContext)
 
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -46,7 +44,7 @@ object ApiClient {
         if (cachedService == null) {
             val retrofit = Retrofit.Builder()
                 .baseUrl(BASE_URL)
-                .client(getOkHttpClient(context))
+                .client(getOkHttpClient(context.applicationContext))
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
 

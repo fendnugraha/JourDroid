@@ -9,7 +9,7 @@ object FormatterUtils {
      * Mengubah Double/Int menjadi format Rupiah modern
      * Contoh: 15000000.0 -> "Rp 15.000.000"
      */
-    fun formatRupiah(amount: Double?): String {
+    fun formatRupiah(amount: Int): String {
         if (amount == null) return "Rp 0"
         return try {
             val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))

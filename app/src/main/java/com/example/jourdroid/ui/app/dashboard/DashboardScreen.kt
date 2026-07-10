@@ -2,7 +2,6 @@ package com.example.jourdroid.ui.app.dashboard
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
@@ -22,8 +21,10 @@ import com.example.jourdroid.data.UserData
 import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.ui.app.transaction.JournalTable
+import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
 import com.example.jourdroid.utils.BluetoothPrinterManager
 import com.example.jourdroid.utils.DateUtils
+import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 
 import kotlinx.coroutines.launch
 
@@ -44,12 +45,14 @@ fun DashboardScreen(
     // 🟢 SINKRON: Tipe data menggunakan List<JournalData> sesuai data class barumu
     var journals by remember { mutableStateOf<List<JournalData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+    var isLoggingOut by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var selectedJournalForPrint by remember { mutableStateOf<JournalData?>(null) }
 
     val userWarehouseId = user.role?.warehouseId ?: 0
 
-    // Ambil data jurnal dari API Laravel
-    LaunchedEffect(Unit) {
+    // Fungsi untuk ambil data dari API
+    val refreshJournals = suspend {
         try {
             isLoading = true
             errorMessage = null
@@ -58,10 +61,9 @@ fun DashboardScreen(
             val today = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 DateUtils.getTodayJakartaFormat()
             } else {
-                "2026-07-09" // Menyesuaikan fallback date yang valid
+                "2026-07-09"
             }
 
-            // Tembak API-nya! (Token otomatis diurus oleh ApiClient interceptor)
             val response = apiService.getJournalByWarehouse(
                 warehouse = userWarehouseId,
                 startDate = today,
@@ -73,10 +75,15 @@ fun DashboardScreen(
                 errorMessage = response.message
             }
         } catch (e: Exception) {
-            errorMessage = "Gagal memuat data dari server: ${e.localizedMessage}"
+            errorMessage = "Gagal memuat data: ${e.localizedMessage}"
         } finally {
             isLoading = false
         }
+    }
+
+    // Ambil data jurnal saat pertama kali buka
+    LaunchedEffect(Unit) {
+        refreshJournals()
     }
 
     // State Izin Bluetooth (Android 12+)
@@ -130,11 +137,22 @@ fun DashboardScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // ─── KONDISIONAL DAFTAR JURNAL / MUTASI ───
-        Text(
-            text = "--- DAFTAR MUTASI JURNAL HARI INI ---",
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.align(Alignment.Start)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "--- DAFTAR MUTASI ---",
+                style = MaterialTheme.typography.labelLarge
+            )
+            TextButton(
+                onClick = { scope.launch { refreshJournals() } },
+                enabled = !isLoading
+            ) {
+                Text("Refresh")
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
 
         when {
@@ -146,102 +164,59 @@ fun DashboardScreen(
             }
             else -> {
                 // Dioper ke komponen JournalTable pembaca JournalData milikmu
-                Box(modifier = Modifier.heightIn(max = 250.dp)) {
-                    JournalTable(journals = journals)
+                Box(modifier = Modifier.heightIn(max = 450.dp)) {
+                    JournalTable(
+                        journals = journals,
+                        onJournalClick = { selectedJournalForPrint = it }
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // ─── BAGIAN SISTEM PRINTER THERMAL ───
-        Text(text = "--- PRINTER THERMAL ---", style = MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (!hasBluetoothPermission) {
-            Button(onClick = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-                }
-            }) {
-                Text("Izinkan Akses Bluetooth")
-            }
-        } else {
-            val pairedPrinters = remember(hasBluetoothPermission) { printerManager.getPairedPrinters() }
-
-            if (pairedPrinters.isEmpty()) {
-                Text(
-                    text = "Tidak ada printer thermal yang terikat. Silakan pasangkan dahulu lewat menu Bluetooth pengaturan HP.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-            } else {
-                pairedPrinters.forEach { device ->
-                    @SuppressLint("MissingPermission")
-                    Button(
-                        onClick = {
-                            Toast.makeText(context, "Menghubungkan ke ${device.name}...", Toast.LENGTH_SHORT).show()
-                            val success = printerManager.connectToPrinter(device)
-                            if (success) {
-                                Toast.makeText(context, "Koneksi Sukses! Mencetak...", Toast.LENGTH_SHORT).show()
-                                val strukText = """
-                                    ================================
-                                             JOURDROID SHOP         
-                                    ================================
-                                    Kasir  : $userName
-                                    Gudang : $userWarehouseName
-                                    --------------------------------
-                                    Item 1          Rp 50.000
-                                    Item 2          Rp 25.000
-                                    --------------------------------
-                                    Total           Rp 75.000
-                                    ================================
-                                       Terima Kasih Telah Belanja   
-                                    ================================
-                                """.trimIndent()
-
-                                printerManager.printText(strukText)
-                                printerManager.disconnect()
-                            } else {
-                                Toast.makeText(context, "Gagal koneksi ke Printer.", Toast.LENGTH_LONG).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        @SuppressLint("MissingPermission")
-                        Text("Cetak Struk via ${device.name}")
-                    }
-                }
-            }
+        // ─── DIALOG PREVIEW CETAK ───
+        if (selectedJournalForPrint != null) {
+            PrintJournalReceiptDialog(
+                journal = selectedJournalForPrint!!,
+                agentName = userName,
+                warehouseName = userWarehouseName,
+                onDismiss = { selectedJournalForPrint = null }
+            )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
 
         // ─── TOMBOL LOGOUT ───
         Button(
             onClick = {
-                scope.launch {
-                    try {
-                        val apiService = ApiClient.getApiService(context)
-                        val response = apiService.logout()
-                        if (response.isSuccessful) {
-                            onLogoutClick()
-                        } else {
-                            // Jika 405 atau error lain, tetap logout di local untuk keamanan user
-                            Toast.makeText(context, "Logout server gagal (${response.code()}), membersihkan sesi lokal...", Toast.LENGTH_SHORT).show()
-                            onLogoutClick()
+                if (!isLoggingOut) {
+                    isLoggingOut = true
+                    scope.launch {
+                        try {
+                            val apiService = ApiClient.getApiService(context)
+                            val response = apiService.logout()
+                            if (!response.isSuccessful) {
+                                Toast.makeText(context, "Sesi server berakhir atau error (${response.code()})", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            // Abaikan error jaringan saat logout, tetap bersihkan data lokal
+                        } finally {
+                            isLoggingOut = false
+                            onLogoutClick() // Selalu panggil logout lokal
                         }
-                    } catch (e: Exception) {
-                        onLogoutClick()
                     }
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoggingOut
         ) {
-            Text("Logout / Keluar")
+            if (isLoggingOut) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onError,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Logout / Keluar")
+            }
         }
     }
 }
