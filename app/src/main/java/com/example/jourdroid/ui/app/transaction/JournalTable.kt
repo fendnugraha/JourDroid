@@ -3,10 +3,16 @@ package com.example.jourdroid.ui.app.transaction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warehouse
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,39 +50,45 @@ fun JournalItem(journal: JournalData, onClick: () -> Unit) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
-                    text = "No. Journal: ${journal.id}, Status: ${if (journal.status == 0) "On Delivery" else "Delivered"}",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "No. Journal: ${journal.id}",
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "Tanggal: ${journal.dateIssued}",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = journal.dateIssued,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
+            Text(modifier = Modifier.padding(top = 4.dp), text = if (journal.status == 0) "On Delivery" else "Delivered", style = MaterialTheme.typography.bodySmall)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom // 🟢 Tetap "items-end" untuk menyamakan rata bawah
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // 🟢 Column ini mengambil sisa ruang horizontal di kiri (Flex: 1)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Invoice: ${journal.invoice}",
-                        style = MaterialTheme.typography.bodyMedium
-                        // 🔴 Hapus Modifier.weight di sini
+                Row(
+//                    modifier = Modifier.padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Warehouse,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Tujuan: ${journal.debt?.warehouse?.name ?: "Cabang"}",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = journal.debt?.warehouse?.name ?: "Cabang",
+                        style = MaterialTheme.typography.bodySmall
                         // 🔴 Hapus Modifier.weight di sini
                     )
                 }
 
-                // 🟢 Teks Rupiah akan otomatis mepet ke kanan secara rapi
-                Text(
-                    text = formatRupiah(journal.amount),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
+                    Text(
+                        text = formatRupiah(journal.amount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
             }
         }
     }
