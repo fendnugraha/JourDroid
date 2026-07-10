@@ -1,127 +1,286 @@
 package com.example.jourdroid.ui.auth
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.utils.AuthManager
 import kotlinx.coroutines.launch
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
 
 @Composable
 fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val authManager = remember { AuthManager(context) }
+    val scrollState = rememberScrollState()
 
-    Column(
+    // Soft gradient background typical of modern apps
+    val gradient = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            MaterialTheme.colorScheme.surface
+        )
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(gradient)
     ) {
-        Text(text = "Welcome to Jourdroid", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
 
-        // ... Input Email & Password tetap sama ...
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+            // App Brand Icon
+            Surface(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(20.dp)),
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.VpnKey,
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // ================= TOMBOL LOGIN UTAMA =================
-        Button(
-            onClick = {
-                scope.launch {
-                    try {
-                        val apiService = ApiClient.getApiService(context)
-                        val response = apiService.login(email, password)
+            // Welcome Messaging
+            Text(
+                text = "Welcome to JourDroid",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            Text(
+                text = "Enter your credentials to access your dashboard",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
-                        if (response.success && response.token != null) {
-                            authManager.saveToken(response.token)
+            Spacer(modifier = Modifier.height(48.dp))
 
-                            // 🔴 AMBIL OBJECT USER DARI LOGINRESPONSE DAN SIMPAN KE HP
-                            response.user?.let { user ->
-                                authManager.saveUserData(user)
-                                Toast.makeText(context, "Login Sukses! Token disimpan.", Toast.LENGTH_SHORT).show()
-                                onLoginSuccess(user)
+            // Main Login Card
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Email input with icon and modern styling
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email Address") },
+                        placeholder = { Text("name@example.com") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Email, 
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
+
+                    // Password input with visibility toggle
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Lock, 
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
+                        },
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
+
+                    // Secondary actions
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { /* TODO: Forgot Password */ }) {
+                            Text(
+                                "Forgot Password?",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Koneksi Gagal: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Login")
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    // Main Action: Login
+                    Button(
+                        onClick = {
+                            if (email.isBlank() || password.isBlank()) {
+                                Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            
+                            isLoading = true
+                            scope.launch {
+                                try {
+                                    val apiService = ApiClient.getApiService(context)
+                                    val response = apiService.login(email, password)
 
-        // ================= 🔴 TOMBOL TEST KONEKSI BARU =================
-        OutlinedButton(
-            onClick = {
-                scope.launch {
-                    try {
-                        Toast.makeText(context, "Mencoba menghubungkan ke server...", Toast.LENGTH_SHORT).show()
-
-                        val apiService = ApiClient.getApiService(context)
-                        val response = apiService.testConnection()
-
-                        if (response.isSuccessful) {
-                            Toast.makeText(context, "⚡ Terhubung! Server Laravel & Ngrok Aktif.", Toast.LENGTH_LONG).show()
+                                    if (response.success && response.token != null) {
+                                        authManager.saveToken(response.token)
+                                        response.user?.let { user ->
+                                            authManager.saveUserData(user)
+                                            Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                                            onLoginSuccess(user)
+                                        }
+                                    } else {
+                                        Toast.makeText(context, response.message, Toast.LENGTH_LONG).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Network Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = !isLoading,
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 3.dp
+                            )
                         } else {
-                            Toast.makeText(context, "⚠️ Server merespon, tapi status: ${response.code()}", Toast.LENGTH_LONG).show()
+                            Text(
+                                "LOG IN",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.25.sp
+                                )
+                            )
                         }
-                    } catch (e: Exception) {
-                        // Jika URL Ngrok salah atau Ngrok mati, akan langsung masuk ke sini
-                        Toast.makeText(context, "❌ Gagal Terhubung! Periksa kembali URL Ngrok di ApiClient.kt atau jalankan ngrok di Macbook.", Toast.LENGTH_LONG).show()
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Text("Test Koneksi ke API")
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Utility Action: Connection Check
+            Text(
+                text = "Trouble connecting?",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        try {
+                            Toast.makeText(context, "Checking server connectivity...", Toast.LENGTH_SHORT).show()
+                            val apiService = ApiClient.getApiService(context)
+                            val response = apiService.testConnection()
+                            if (response.isSuccessful) {
+                                Toast.makeText(context, "⚡ Server is Online", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(context, "⚠️ Server Error: ${response.code()}", Toast.LENGTH_LONG).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "❌ Could not reach server", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Text(
+                    "Test Server Status",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(48.dp))
         }
     }
 }
