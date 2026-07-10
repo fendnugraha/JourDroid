@@ -90,7 +90,8 @@ fun DashboardScreen(
     var hasBluetoothPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
             } else {
                 true
             }
@@ -98,18 +99,24 @@ fun DashboardScreen(
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions.values.all { it }
         hasBluetoothPermission = isGranted
         if (!isGranted) {
-            Toast.makeText(context, "Izin Bluetooth ditolak. Tidak bisa cetak struk.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Izin Bluetooth (Connect & Scan) diperlukan untuk cetak struk.", Toast.LENGTH_LONG).show()
         }
     }
 
     // Auto-request permission saat pertama buka halaman jika di Android 12 ke atas
     LaunchedEffect(Unit) {
         if (!hasBluetoothPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN
+                )
+            )
         }
     }
 

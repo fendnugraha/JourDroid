@@ -72,13 +72,13 @@ fun PrintJournalReceiptDialog(
         ================================
         No. Journal : ${journal.id}
         Tanggal     : ${journal.dateIssued}
-        Kasir       : $agentName
-        Gudang      : $warehouseName
+        User Name   : $agentName
+        Tujuan      : ${journal.debt?.warehouse?.name ?: "Cabang"}
         --------------------------------
         JUMLAH TOTAL: Rp ${formatRupiah(journal.amount)}
         --------------------------------
         ================================
-           Terima Kasih Telah Belanja   
+           Hitung sebelum diterima   
         ================================
     """.trimIndent()
 

@@ -22,37 +22,121 @@ class BluetoothPrinterManager(private val context: Context) {
     // 1. Fungsi mengambil daftar printer yang sudah PAIRED (terhubung) di HP
     @SuppressLint("MissingPermission")
     fun getPairedPrinters(): List<BluetoothDevice> {
-        val pairedDevices = bluetoothAdapter?.bondedDevices
-        return pairedDevices?.filter { device ->
-            // Filter perangkat yang sekiranya berupa printer atau audio/peripheral thermal
-            device.bluetoothClass?.majorDeviceClass == 1536 || device.name.lowercase().contains("printer")
-        } ?: emptyList()
+        return try {
+            val pairedDevices = bluetoothAdapter?.bondedDevices
+            pairedDevices?.filter { device ->
+                val deviceName = device.name?.lowercase() ?: ""
+                // Filter perangkat yang sekiranya berupa printer atau audio/peripheral thermal
+                device.bluetoothClass?.majorDeviceClass == 1536 || deviceName.contains("printer")
+            } ?: emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 
     // 2. Fungsi menghubungkan HP ke Printer
     @SuppressLint("MissingPermission")
     fun connectToPrinter(device: BluetoothDevice): Boolean {
-        return try {
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(PRINTER_UUID)
-            bluetoothSocket?.connect()
-            outputStream = bluetoothSocket?.outputStream
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
+        // Coba hingga 2 kali jika gagal (Seringkali percobaan kedua berhasil setelah stack reset)
+        for (attempt in 1..2) {
+            try {
+                // 1. Matikan discovery
+                bluetoothAdapter?.cancelDiscovery()
+                
+                // 2. Beri jeda agar hardware siap
+                Thread.sleep(1000)
+
+                // 3. Bersihkan sisa koneksi
+                disconnect()
+
+                var success = false
+                
+                // Strategi 1: Insecure RFCOMM (Paling kompatibel)
+                try {
+                    bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(PRINTER_UUID)
+                    bluetoothSocket?.connect()
+                    success = true
+                } catch (e: Exception) {
+                    disconnect()
+                    // Strategi 2: Reflection Port 1 (Fix umum untuk 'read failed')
+                    try {
+                        val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+                        bluetoothSocket = m.invoke(device, 1) as BluetoothSocket
+                        bluetoothSocket?.connect()
+                        success = true
+                    } catch (e2: Exception) {
+                        disconnect()
+                        // Strategi 3: Secure RFCOMM
+                        try {
+                            bluetoothSocket = device.createRfcommSocketToServiceRecord(PRINTER_UUID)
+                            bluetoothSocket?.connect()
+                            success = true
+                        } catch (e3: Exception) {
+                            success = false
+                        }
+                    }
+                }
+
+                if (success) {
+                    outputStream = bluetoothSocket?.outputStream
+                    return true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                disconnect()
+            }
+            // Jika percobaan pertama gagal, tunggu sebentar sebelum coba lagi
+            Thread.sleep(1000)
         }
+        return false
     }
 
     @SuppressLint("MissingPermission")
     suspend fun testConnection(device: BluetoothDevice): Result<Unit> {
-        return try {
-            val socket = device.createRfcommSocketToServiceRecord(PRINTER_UUID)
-            socket.connect()
-            socket.close()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
+        // Mirip dengan connectToPrinter, coba hingga 2 kali
+        for (attempt in 1..2) {
+            try {
+                bluetoothAdapter?.cancelDiscovery()
+                Thread.sleep(1000)
+                
+                var socket: BluetoothSocket? = null
+                var success = false
+
+                try {
+                    socket = device.createInsecureRfcommSocketToServiceRecord(PRINTER_UUID)
+                    socket.connect()
+                    success = true
+                } catch (e: Exception) {
+                    socket?.close()
+                    try {
+                        val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+                        socket = m.invoke(device, 1) as BluetoothSocket
+                        socket.connect()
+                        success = true
+                    } catch (e2: Exception) {
+                        socket?.close()
+                        try {
+                            socket = device.createRfcommSocketToServiceRecord(PRINTER_UUID)
+                            socket.connect()
+                            success = true
+                        } catch (e3: Exception) {
+                            success = false
+                        }
+                    }
+                }
+
+                if (success && socket != null) {
+                    socket.close()
+                    Thread.sleep(1000) // Jeda lebih lama setelah test agar port benar-benar bebas
+                    return Result.success(Unit)
+                }
+            } catch (e: Exception) {
+                if (attempt == 2) return Result.failure(e)
+            }
+            Thread.sleep(1000)
         }
+        return Result.failure(Exception("Koneksi gagal setelah beberapa kali percobaan. Pastikan printer tidak sedang terhubung ke perangkat lain."))
     }
 
     // 3. Fungsi cetak teks struk (Format ESC/POS dasar)
@@ -88,6 +172,7 @@ class BluetoothPrinterManager(private val context: Context) {
         val initPrinter = byteArrayOf(0x1B, 0x40)
         val alignCenter = byteArrayOf(0x1B, 0x61, 0x01)
         val alignLeft = byteArrayOf(0x1B, 0x61, 0x00)
+        val alignRight = byteArrayOf(0x1B, 0x61, 0x02)
         val boldOn = byteArrayOf(0x1B, 0x45, 0x01)
         val boldOff = byteArrayOf(0x1B, 0x45, 0x00)
         val doubleHeightOn = byteArrayOf(0x1B, 0x21, 0x10)
@@ -114,10 +199,10 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(alignCenter)
         writeCommand(doubleHeightOn)
         writeCommand(boldOn)
-        writeLine("JOURDROID SHOP")
+        writeLine("BRILINK THREEKOMUNIKA")
         writeCommand(textNormal)
         writeCommand(boldOn)
-        writeLine("BUKTI MUTASI JURNAL")
+        writeLine(journalData.dateIssued)
         writeCommand(boldOff)
         writeLine("================================")
         writeCommand(lf)
@@ -125,15 +210,20 @@ class BluetoothPrinterManager(private val context: Context) {
         // 3. Body
         writeCommand(alignLeft)
         writeLine("No. Journal : ${journalData.id}")
-        writeLine("Tanggal     : ${journalData.dateIssued}")
-        writeLine("Invoice No. : ${journalData.invoice}")
-        writeLine("Petugas     : ${agentName ?: "Staff"}")
-        writeLine("Gudang      : ${warehouseName ?: "Utama"}")
+        writeLine("Pengirim    : ${agentName ?: "Staff"}")
+        writeLine("Tujuan      : ${journalData.debt?.warehouse?.name ?: "Utama"}")
         writeLine("--------------------------------")
-        writeLine("JUMLAH TOTAL: ${formatRupiah(journalData.amount)}")
+        writeCommand(alignRight)
+        writeCommand(doubleHeightOn)
+        writeCommand(boldOn)
+        writeLine(formatRupiah(journalData.amount))
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeCommand(alignLeft)
         writeLine("--------------------------------")
 
         writeLine("Note: ${journalData.description}")
+        writeCommand(lf)
 
         // 4. Status
         writeCommand(alignCenter)
@@ -144,8 +234,7 @@ class BluetoothPrinterManager(private val context: Context) {
 
         // 5. Footer
         writeCommand(alignCenter)
-        writeLine("Simpan resi ini sebagai")
-        writeLine("bukti transaksi yang sah.")
+        writeLine("Hitung sebelum diterima")
         writeCommand(boldOn)
         writeLine("TERIMA KASIH")
         writeCommand(boldOff)
@@ -163,6 +252,9 @@ class BluetoothPrinterManager(private val context: Context) {
             bluetoothSocket?.close()
         } catch (e: Exception) {
             e.printStackTrace()
+        } finally {
+            outputStream = null
+            bluetoothSocket = null
         }
     }
     
