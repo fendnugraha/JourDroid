@@ -1,4 +1,4 @@
-package com.example.jourdroid.ui.app.transaction
+package com.example.jourdroid.ui.app.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -8,12 +8,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.example.jourdroid.data.UserData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TransactionScreen(
+fun ProfileScreen(
     user: UserData
 ) {
     val gradient = Brush.verticalGradient(
@@ -28,7 +27,7 @@ fun TransactionScreen(
             CenterAlignedTopAppBar(
                 title = { 
                     Text(
-                        "Transactions", 
+                        "User Profile", 
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                     ) 
                 }
@@ -44,7 +43,7 @@ fun TransactionScreen(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Transaction History coming soon",
+                text = "Profile Page for ${user.name}",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

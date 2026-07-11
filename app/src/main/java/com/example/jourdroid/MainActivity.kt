@@ -12,7 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.example.jourdroid.data.UserData
-import com.example.jourdroid.ui.app.dashboard.DashboardScreen
+import com.example.jourdroid.ui.app.MainAppContainer
 import com.example.jourdroid.ui.auth.LoginScreen
 import com.example.jourdroid.ui.theme.JourDroidTheme
 import com.example.jourdroid.utils.AuthManager
@@ -45,8 +45,8 @@ class MainActivity : ComponentActivity() {
                         val user = currentUser
 
                         if (isLoggedIn && user != null) {
-                            DashboardScreen(
-                                user = user, // 🔥 Sekarang semua data (Nama, Email, Warehouse ID) dikirim sekaligus dalam satu objek ini
+                            MainAppContainer(
+                                user = user,
                                 onLogoutClick = {
                                     authManager.clearAuth()
                                     currentUser = null
