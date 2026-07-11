@@ -44,4 +44,13 @@ object FormatterUtils {
             dateStr
         }
     }
+
+    fun formatTimeOnly(timeStr: String?): String {
+        if (timeStr.isNullOrEmpty()) return "-"
+        return try {
+            timeStr.substring(11, 19)
+        } catch (e: Exception) {
+            timeStr
+        }
+    }
 }

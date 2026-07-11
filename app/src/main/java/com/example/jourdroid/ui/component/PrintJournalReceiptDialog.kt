@@ -75,7 +75,7 @@ fun PrintJournalReceiptDialog(
         User Name   : $agentName
         Tujuan      : ${journal.debt?.warehouse?.name ?: "Cabang"}
         --------------------------------
-        JUMLAH TOTAL: Rp ${formatRupiah(journal.amount)}
+        JUMLAH: Rp ${formatRupiah(journal.amount)}
         --------------------------------
         ================================
            Hitung sebelum diterima   

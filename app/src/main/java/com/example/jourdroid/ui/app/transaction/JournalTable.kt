@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PedalBike
 import androidx.compose.material.icons.filled.Warehouse
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
+import com.example.jourdroid.utils.FormatterUtils.formatTimeOnly
 
 
 @Composable
@@ -50,15 +53,40 @@ fun JournalItem(journal: JournalData, onClick: () -> Unit) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
-                    text = "No. Journal: ${journal.id}",
+                    text = "ID ${journal.id}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = journal.dateIssued,
+                    text = formatTimeOnly(journal.dateIssued),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            Text(modifier = Modifier.padding(top = 4.dp), text = if (journal.status == 0) "On Delivery" else "Delivered", style = MaterialTheme.typography.bodySmall)
+//            Text(modifier = Modifier.padding(top = 4.dp), text = if (journal.status == 0) "On Delivery" else "Delivered", style = MaterialTheme.typography.bodySmall)
+            // 🟢 Menggunakan Triple(A, B, C) untuk menampung 3 data
+            val (statusIcon, statusText, statusColor) = if (journal.status == 0) {
+                Triple(Icons.Default.PedalBike, "On Delivery", MaterialTheme.colorScheme.primary)
+            } else {
+                Triple(Icons.Default.CheckCircle, "Delivered", MaterialTheme.colorScheme.secondary)
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = statusIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = statusColor // 💡 Bagus juga kalau warna ikon ikut statusColor supaya serasi!
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodySmall, // ⚠️ Pastikan tambahkan koma di sini
+                    color = statusColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom,
@@ -86,7 +114,7 @@ fun JournalItem(journal: JournalData, onClick: () -> Unit) {
                         text = formatRupiah(journal.amount),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 14.sp
                     )
 
             }

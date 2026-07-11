@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warehouse
@@ -35,6 +36,7 @@ import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.ui.app.transaction.JournalTable
 import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
+import com.example.jourdroid.ui.component.SlideUpModal
 import com.example.jourdroid.utils.BluetoothPrinterManager
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
@@ -63,6 +65,7 @@ fun DashboardScreen(
     var selectedJournalForPrint by remember { mutableStateOf<JournalData?>(null) }
 
     val userWarehouseId = user.role?.warehouseId ?: 0
+    var isModalOpen by remember { mutableStateOf(false) }
 
     // Refresh function
     val refreshJournals = suspend {
@@ -150,10 +153,24 @@ fun DashboardScreen(
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { isModalOpen = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Tambah Jurnal")
+            }
         },
         containerColor = Color.Transparent
     ) { innerPadding ->
@@ -345,5 +362,25 @@ fun DashboardScreen(
             warehouseName = userWarehouseName,
             onDismiss = { selectedJournalForPrint = null }
         )
+    }
+
+    SlideUpModal(
+        visible = isModalOpen,
+        title = "Tambah Transaksi Jurnal",
+        onClose = { isModalOpen = false }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Form tambah transaksi akan ada di sini.")
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { isModalOpen = false }) {
+                Text("Simpan")
+            }
+        }
     }
 }

@@ -211,7 +211,7 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(alignLeft)
         writeLine("No. Journal : ${journalData.id}")
         writeLine("Pengirim    : ${agentName ?: "Staff"}")
-        writeLine("Tujuan      : ${journalData.debt?.warehouse?.name ?: "Utama"}")
+        writeLine("Tujuan      : ${journalData.debt?.warehouse?.name ?: "Cabang"}")
         writeLine("--------------------------------")
         writeCommand(alignRight)
         writeCommand(doubleHeightOn)
