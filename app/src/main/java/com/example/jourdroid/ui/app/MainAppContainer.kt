@@ -103,9 +103,9 @@ fun MainAppContainer(
             label = "ScreenTransition"
         ) { screen ->
             when (screen) {
-                is Screen.Dashboard -> DashboardScreen(user = user, onLogoutClick = onLogoutClick)
+                is Screen.Dashboard -> DashboardScreen(user = user)
                 is Screen.Transactions -> TransactionScreen(user = user)
-                is Screen.Profile -> ProfileScreen(user = user)
+                is Screen.Profile -> ProfileScreen(user = user, onLogoutClick = onLogoutClick)
             }
         }
     }
