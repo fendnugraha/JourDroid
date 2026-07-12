@@ -200,10 +200,10 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(doubleHeightOn)
         writeCommand(boldOn)
         writeLine("BRILINK THREEKOMUNIKA")
-        writeCommand(textNormal)
-        writeCommand(boldOn)
-        writeLine(journalData.dateIssued)
         writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeLine("Penambahan Kas")
+        writeLine(journalData.dateIssued)
         writeLine("================================")
         writeCommand(lf)
 
@@ -211,7 +211,12 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(alignLeft)
         writeLine("No. Journal : ${journalData.id}")
         writeLine("Pengirim    : ${agentName ?: "Staff"}")
-        writeLine("Tujuan      : ${journalData.debt?.warehouse?.name ?: "Cabang"}")
+        writeLine("Kurir       : Nurjaelani")
+        writeLine("Tujuan      :")
+        writeCommand(alignRight)
+        writeLine(journalData.debt?.warehouse?.name ?: "Cabang")
+        writeCommand(alignLeft)
+
         writeLine("--------------------------------")
         writeCommand(alignRight)
         writeCommand(doubleHeightOn)
@@ -227,17 +232,16 @@ class BluetoothPrinterManager(private val context: Context) {
 
         // 4. Status
         writeCommand(alignCenter)
-        writeCommand(boldOn)
-        writeLine("STATUS: BERHASIL")
-        writeCommand(boldOff)
+        writeLine("Ttd Penerima")
+        writeCommand(lf)
+        writeCommand(lf)
+        writeCommand(lf)
         writeCommand(lf)
 
         // 5. Footer
         writeCommand(alignCenter)
         writeLine("Hitung sebelum diterima")
-        writeCommand(boldOn)
         writeLine("TERIMA KASIH")
-        writeCommand(boldOff)
         writeCommand(lf)
         writeCommand(lf)
         writeCommand(lf) // Feeds for cutting

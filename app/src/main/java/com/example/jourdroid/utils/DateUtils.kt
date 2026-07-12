@@ -15,4 +15,12 @@ object DateUtils {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         return todayInJakarta.format(formatter)
     }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getNowJakartaFormat(): String {
+        val jakartaZone = ZoneId.of("Asia/Jakarta")
+        val nowInJakarta = ZonedDateTime.now(jakartaZone)
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        return nowInJakarta.format(formatter)
+    }
 }
