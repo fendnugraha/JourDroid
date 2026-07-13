@@ -9,16 +9,16 @@ data class MutationJournalData (
 )
 
 data class JournalData (
-    val id: Int,
-    @SerializedName("date_issued") val dateIssued: String,
-    val invoice: String,
-    val description: String,
-    val status: Int,
-    @SerializedName("trx_type") val trxType: String,
-    val amount: Int,
-    @SerializedName("fee_amount") val feeAmount: Int,
-    val debt: DebtDetail?,
-    val cred: CredDetail?
+    val id: Int = 0,
+    @SerializedName("date_issued") val dateIssued: String? = "",
+    val invoice: String? = "",
+    val description: String? = "",
+    val status: Int = 0,
+    @SerializedName("trx_type") val trxType: String? = "",
+    val amount: Int = 0,
+    @SerializedName("fee_amount") val feeAmount: Int = 0,
+    val debt: DebtDetail? = null,
+    val cred: CredDetail? = null
 )
 
 data class DebtDetail (

@@ -48,7 +48,7 @@ fun CreateMutationFromHq(
 
     var isLoading by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
-    var autoPrint by remember { mutableStateOf(false) }
+    var autoPrint by remember { mutableStateOf(true) }
 
     // Dropdown expanded states
     var warehouseExpanded by remember { mutableStateOf(false) }
@@ -370,10 +370,17 @@ fun CreateMutationFromHq(
                             )
                             
                             if (response.isSuccessful) {
+                                val createResponse = response.body()
+                                val createdJournal = createResponse?.data
                                 Toast.makeText(context, "Mutasi berhasil dibuat", Toast.LENGTH_SHORT).show()
-                                val createdJournal = response.body()?.data
+                                
                                 if (autoPrint) {
-                                    onSuccess(createdJournal)
+                                    if (createdJournal != null) {
+                                        onSuccess(createdJournal)
+                                    } else {
+                                        Toast.makeText(context, "Berhasil, tapi data cetak tidak diterima dari server", Toast.LENGTH_LONG).show()
+                                        onSuccess(null)
+                                    }
                                 } else {
                                     onSuccess(null)
                                 }

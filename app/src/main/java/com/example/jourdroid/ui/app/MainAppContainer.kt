@@ -1,24 +1,17 @@
 package com.example.jourdroid.ui.app
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.jourdroid.data.UserData
@@ -60,11 +53,11 @@ fun MainAppContainer(
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0), // Disable default insets to let screens handle them
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
-                modifier = Modifier.padding(bottom = 0.dp) // standard bottom bar
+                tonalElevation = 0.dp
             ) {
                 val items = listOf(Screen.Dashboard, Screen.Transactions, Screen.Profile)
                 items.forEach { screen ->
@@ -97,6 +90,7 @@ fun MainAppContainer(
             }
         }
     ) { innerPadding ->
+        // innerPadding only contains bottom padding for NavigationBar due to contentWindowInsets=0
         Crossfade(
             targetState = currentScreen,
             modifier = Modifier.padding(innerPadding),
@@ -110,4 +104,3 @@ fun MainAppContainer(
         }
     }
 }
-

@@ -203,7 +203,7 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(boldOff)
         writeCommand(textNormal)
         writeLine("Penambahan Kas")
-        writeLine(journalData.dateIssued)
+        writeLine(journalData.dateIssued ?: "-")
         writeLine("================================")
         writeCommand(lf)
 

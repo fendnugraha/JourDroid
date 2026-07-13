@@ -1,12 +1,13 @@
 package com.example.jourdroid.ui.app.dashboard
 
 import android.os.Build
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,11 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.CashBankBalanceItem
-import com.example.jourdroid.data.ChartOfAccounts
-import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.data.UserData
-import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
-import com.example.jourdroid.ui.component.SlideUpModal
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import kotlinx.coroutines.launch
@@ -35,12 +32,10 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var isModalOpen by remember { mutableStateOf(false) }
 
     var balanceData by remember { mutableStateOf<CashBankBalanceItem?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var selectedJournalForPrint by remember { mutableStateOf<JournalData?>(null) }
 
     val userWarehouseId = user.role?.warehouseId ?: 0
 
@@ -79,68 +74,70 @@ fun DashboardScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
             MaterialTheme.colorScheme.surface
         )
     )
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { 
-                    Text(
-                        "Dashboard", 
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
-                    ) 
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(gradient)
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = { 
+                        Text(
+                            "Dashboard", 
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                        ) 
+                    },
+                    actions = {
+                        IconButton(onClick = { scope.launch { refreshData() } }, enabled = !isLoading) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
                 )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { isModalOpen = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+            },
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Jurnal")
-            }
-        },
-        containerColor = Color.Transparent
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient)
-                .padding(innerPadding)
-        ) {
-            when {
-                isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                errorMessage != null -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
-                        Button(onClick = { scope.launch { refreshData() } }, modifier = Modifier.padding(top = 8.dp)) {
-                            Text("Coba Lagi")
+                when {
+                    isLoading -> {
+                        CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+                    }
+                    errorMessage != null -> {
+                        Column(
+                            modifier = Modifier.padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
+                            Button(onClick = { scope.launch { refreshData() } }, modifier = Modifier.padding(top = 8.dp)) {
+                                Text("Coba Lagi")
+                            }
                         }
                     }
-                }
-                balanceData == null || balanceData?.chartOfAccounts?.isEmpty() == true -> {
-                    Text(
-                        text = "Tidak ada data saldo",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                else -> {
-                    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-                        
+                    balanceData == null || balanceData?.chartOfAccounts?.isEmpty() == true -> {
+                        Text(
+                            text = "Tidak ada data saldo",
+                            modifier = Modifier.padding(32.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    else -> {
                         // Summary Cards
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
@@ -163,42 +160,24 @@ fun DashboardScreen(
                         Text(
                             text = "Cash & Bank Details",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            modifier = Modifier.padding(bottom = 12.dp)
+                            modifier = Modifier.align(Alignment.Start).padding(bottom = 12.dp)
                         )
                         
                         CashBankBalance(
                             accounts = balanceData!!.chartOfAccounts,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.heightIn(max = 1000.dp) // Large enough to show all
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = "Dashboard Page",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
-    }
-
-    SlideUpModal(
-        visible = isModalOpen,
-        title = "Tambah Transaksi Jurnal",
-        onClose = { isModalOpen = false }
-    ) {
-        com.example.jourdroid.ui.app.transaction.CreateMutationFromHq(
-            onSuccess = { journal ->
-                isModalOpen = false
-                scope.launch { refreshData() }
-                if (journal != null) {
-                    selectedJournalForPrint = journal
-                }
-            }
-        )
-    }
-
-    if (selectedJournalForPrint != null) {
-        PrintJournalReceiptDialog(
-            journal = selectedJournalForPrint!!,
-            agentName = user.name,
-            warehouseName = user.role?.warehouse?.name ?: "Tanpa Gudang",
-            onDismiss = { selectedJournalForPrint = null }
-        )
     }
 }
 

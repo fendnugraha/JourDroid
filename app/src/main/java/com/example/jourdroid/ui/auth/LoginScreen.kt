@@ -1,8 +1,8 @@
 package com.example.jourdroid.ui.auth
 
 import android.widget.Toast
-import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,12 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jourdroid.R
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.utils.AuthManager
@@ -44,10 +46,10 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
     val authManager = remember { AuthManager(context) }
     val scrollState = rememberScrollState()
 
-    // Soft gradient background typical of modern apps
+    // Gradient background aligned with the app icon's violet palette
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            Color(0xFF8F6AFF).copy(alpha = 0.2f),
             MaterialTheme.colorScheme.surface
         )
     )
@@ -56,6 +58,7 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(gradient)
+            .windowInsetsPadding(WindowInsets.systemBars) // Added to handle edge-to-edge correctly
     ) {
         Column(
             modifier = Modifier
@@ -70,16 +73,17 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
             // App Brand Icon
             Surface(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(20.dp)),
-                color = MaterialTheme.colorScheme.primary
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(24.dp)),
+                color = MaterialTheme.colorScheme.primaryContainer, // Use themed container color
+                shadowElevation = 8.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.VpnKey,
-                        contentDescription = "Logo",
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
+                    Image(
+                        painter = painterResource(id = R.drawable.app_logo),
+                        contentDescription = "App Logo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 }
             }
@@ -91,7 +95,7 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
                 text = "Welcome to JourDroid",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
             Text(
@@ -132,7 +136,9 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                     )
 
@@ -163,7 +169,9 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                     )
 
@@ -271,7 +279,7 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
             ) {
                 Text(
                     "Test Server Status",

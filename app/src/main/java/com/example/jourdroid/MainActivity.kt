@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -35,35 +36,32 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<UserData?>(authManager.getUserData())
                 }
 
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        // CONDITIONAL RENDERING (Saklar manual bolak-balik)
-                        val user = currentUser
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    // CONDITIONAL RENDERING (Saklar manual bolak-balik)
+                    val user = currentUser
 
-                        if (isLoggedIn && user != null) {
-                            MainAppContainer(
-                                user = user,
-                                onLogoutClick = {
-                                    authManager.clearAuth()
-                                    currentUser = null
-                                    isLoggedIn = false
-                                    Toast.makeText(this@MainActivity, "Logout Berhasil", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        } else {
-                            LoginScreen(
-                                onLoginSuccess = { userResponse ->
-                                    // Saat login sukses, tangkap objek userResponse, lalu simpan ke HP dan update state
-                                    authManager.saveUserData(userResponse)
-                                    currentUser = userResponse
-                                    isLoggedIn = true
-                                }
-                            )
-                        }
+                    if (isLoggedIn && user != null) {
+                        MainAppContainer(
+                            user = user,
+                            onLogoutClick = {
+                                authManager.clearAuth()
+                                currentUser = null
+                                isLoggedIn = false
+                                Toast.makeText(this@MainActivity, "Logout Berhasil", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    } else {
+                        LoginScreen(
+                            onLoginSuccess = { userResponse ->
+                                // Saat login sukses, tangkap objek userResponse, lalu simpan ke HP dan update state
+                                authManager.saveUserData(userResponse)
+                                currentUser = userResponse
+                                isLoggedIn = true
+                            }
+                        )
                     }
                 }
             }

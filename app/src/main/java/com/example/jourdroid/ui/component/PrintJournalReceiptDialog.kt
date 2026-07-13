@@ -38,6 +38,7 @@ fun PrintJournalReceiptDialog(
     journal: JournalData,
     agentName: String,
     warehouseName: String,
+    startWithPrinterSelection: Boolean = false, // Added parameter
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -46,13 +47,19 @@ fun PrintJournalReceiptDialog(
     val scope = rememberCoroutineScope()
     val printerManager = remember { BluetoothPrinterManager(context) }
 
-    var showBluetoothPrinters by remember { mutableStateOf(false) }
+    var showBluetoothPrinters by remember { mutableStateOf(startWithPrinterSelection) }
     var bluetoothDevices by remember { mutableStateOf<List<BluetoothDevice>>(emptyList()) }
     var selectedDevice by remember { mutableStateOf<BluetoothDevice?>(null) }
     var isPrinting by remember { mutableStateOf(false) }
     var isTestingConnection by remember { mutableStateOf(false) }
     var printSuccessMsg by remember { mutableStateOf<String?>(null) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(showBluetoothPrinters) {
+        if (showBluetoothPrinters) {
+            bluetoothDevices = printerManager.getPairedPrinters()
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()

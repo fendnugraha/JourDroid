@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -28,7 +29,6 @@ import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
 import com.example.jourdroid.ui.component.SlideUpModal
-import com.example.jourdroid.utils.BluetoothPrinterManager
 import com.example.jourdroid.utils.DateUtils
 import kotlinx.coroutines.launch
 
@@ -37,7 +37,6 @@ import kotlinx.coroutines.launch
 fun TransactionScreen(
     user: UserData
 ) {
-    var isModalOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
@@ -45,6 +44,8 @@ fun TransactionScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectedJournalForPrint by remember { mutableStateOf<JournalData?>(null) }
+    var autoShowPrinterSelection by remember { mutableStateOf(false) }
+    var isModalOpen by remember { mutableStateOf(false) }
 
     val userWarehouseId = user.role?.warehouseId ?: 0
     val userName = user.name
@@ -116,52 +117,54 @@ fun TransactionScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
             MaterialTheme.colorScheme.surface
         )
     )
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { 
-                    Text(
-                        "Activity", 
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
-                    ) 
-                },
-                actions = {
-                    IconButton(onClick = { scope.launch { refreshJournals() } }, enabled = !isLoading) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(gradient)
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = { 
+                        Text(
+                            "Activity", 
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                        ) 
+                    },
+                    actions = {
+                        IconButton(onClick = { scope.launch { refreshJournals() } }, enabled = !isLoading) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
                 )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { isModalOpen = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Jurnal")
-            }
-        },
-        containerColor = Color.Transparent
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient)
-                .padding(innerPadding)
-        ) {
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { isModalOpen = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Tambah Jurnal")
+                }
+            },
+            containerColor = Color.Transparent
+        ) { innerPadding ->
             val scrollState = rememberScrollState()
             
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .padding(horizontal = 20.dp)
                     .verticalScroll(scrollState),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -192,7 +195,7 @@ fun TransactionScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 200.dp, max = 600.dp)
+                        .heightIn(min = 200.dp, max = 800.dp)
                 ) {
                     when {
                         isLoading -> {
@@ -223,7 +226,7 @@ fun TransactionScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(100.dp)) // Extra space for FAB
             }
         }
     }
@@ -233,7 +236,11 @@ fun TransactionScreen(
             journal = selectedJournalForPrint!!,
             agentName = userName,
             warehouseName = userWarehouseName,
-            onDismiss = { selectedJournalForPrint = null }
+            startWithPrinterSelection = autoShowPrinterSelection,
+            onDismiss = { 
+                selectedJournalForPrint = null
+                autoShowPrinterSelection = false
+            }
         )
     }
 
@@ -242,18 +249,18 @@ fun TransactionScreen(
         title = "Tambah Transaksi Jurnal",
         onClose = { isModalOpen = false }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("Form tambah transaksi akan ada di sini.")
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { isModalOpen = false }) {
-                Text("Simpan")
+        CreateMutationFromHq(
+            onSuccess = { journal ->
+                isModalOpen = false
+                scope.launch { refreshJournals() }
+                if (journal != null) {
+                    scope.launch {
+                        kotlinx.coroutines.delay(300)
+                        selectedJournalForPrint = journal
+                        autoShowPrinterSelection = true
+                    }
+                }
             }
-        }
+        )
     }
 }
