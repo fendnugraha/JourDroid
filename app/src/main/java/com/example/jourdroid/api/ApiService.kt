@@ -10,6 +10,7 @@ import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ApiService {
@@ -66,5 +67,17 @@ interface ApiService {
         @Field("trx_type") trxType: String,
         @Field("description") description: String,
     ): retrofit2.Response<com.example.jourdroid.data.MutationCreateResponse>
+
+    @PUT("api/update-delivery-status/{id}/{status}")
+    suspend fun updateJournalStatus(
+        @Path("id") id: Int,
+        @Path("status") status:Int
+    )
+
+    @FormUrlEncoded
+    @POST("api/update-fcm-token")
+    suspend fun updateFcmToken(
+        @Field("fcm_token") token: String
+    ): retrofit2.Response<Unit>
 
 }

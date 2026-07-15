@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "154545460228",
+    "project_id": "jourdroid",
+    "storage_bucket": "jourdroid.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:154545460228:android:d6aecd852291afe5119151",
+        "android_client_info": {
+          "package_name": "com.example.jourdroid"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyVpNweak0Wp0mkAsvDy8kTtCoW4DAdVY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

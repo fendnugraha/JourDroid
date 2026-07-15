@@ -33,10 +33,9 @@ fun JournalTable(
     journals: List<JournalData>,
     onJournalClick: (JournalData) -> Unit
 ) {
-    val filteredJournals = journals.filter { it.trxType == "Mutasi Kas" && it.cred?.warehouseId == 1 && it.cred.accountId == 1 }
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-        items(filteredJournals.size) { index ->
-            val journal = filteredJournals[index]
+        items(journals.size) { index ->
+            val journal = journals[index]
             JournalItem(journal, onClick = { onJournalClick(journal) })
         }
     }

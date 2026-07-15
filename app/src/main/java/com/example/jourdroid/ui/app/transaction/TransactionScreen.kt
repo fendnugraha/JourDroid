@@ -218,8 +218,11 @@ fun TransactionScreen(
                             )
                         }
                         else -> {
+                            val filteredJournals = journals.filter { 
+                                it.trxType == "Mutasi Kas" && it.cred?.warehouseId == 1 && it.cred.accountId == 1 
+                            }
                             JournalTable(
-                                journals = journals,
+                                journals = filteredJournals,
                                 onJournalClick = { selectedJournalForPrint = it }
                             )
                         }
