@@ -5,8 +5,11 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Context
+import com.example.jourdroid.data.DeliveryItem
 import com.example.jourdroid.data.JournalData
+import com.example.jourdroid.data.SalesData
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
+import com.example.jourdroid.utils.FormatterUtils.formatShortDate
 import java.io.OutputStream
 import java.util.UUID
 
@@ -245,6 +248,171 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(lf)
         writeCommand(lf)
         writeCommand(lf) // Feeds for cutting
+
+        return bytes.toByteArray()
+    }
+
+    fun generatePosReceiptBytes(salesData: SalesData, agentName: String?, warehouseName: String?): ByteArray {
+        val bytes = ArrayList<Byte>()
+
+        // ESC/POS Command Constants
+        val initPrinter = byteArrayOf(0x1B, 0x40)
+        val alignCenter = byteArrayOf(0x1B, 0x61, 0x01)
+        val alignLeft = byteArrayOf(0x1B, 0x61, 0x00)
+        val alignRight = byteArrayOf(0x1B, 0x61, 0x02)
+        val boldOn = byteArrayOf(0x1B, 0x45, 0x01)
+        val boldOff = byteArrayOf(0x1B, 0x45, 0x00)
+        val doubleHeightOn = byteArrayOf(0x1B, 0x21, 0x10)
+        val textNormal = byteArrayOf(0x1B, 0x21, 0x00)
+        val lf = byteArrayOf(0x0A)
+
+        fun writeText(text: String) {
+            bytes.addAll(text.toByteArray(charset("GBK")).toList())
+        }
+
+        fun writeLine(text: String) {
+            writeText(text)
+            bytes.addAll(lf.toList())
+        }
+
+        fun writeCommand(cmd: ByteArray) {
+            bytes.addAll(cmd.toList())
+        }
+
+        // 1. Initialize
+        writeCommand(initPrinter)
+
+        // 2. Header
+        writeCommand(alignCenter)
+        writeCommand(doubleHeightOn)
+        writeCommand(boldOn)
+        writeLine("JOURDROID POS")
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeLine(warehouseName ?: "Store Branch")
+        writeLine(salesData.dateIssued ?: "-")
+        writeLine("Inv: ${salesData.invoice ?: salesData.id}")
+        writeLine("Cashier: ${agentName ?: "Staff"}")
+        writeLine("================================")
+
+        // 3. Items
+        writeCommand(alignLeft)
+        salesData.items?.forEach { item ->
+            writeLine(item.productName)
+            val qtyPrice = "${item.quantity} x ${formatRupiah(item.price)}"
+            val subtotal = formatRupiah(item.subtotal)
+            
+            // Basic alignment for price and subtotal
+            val spacesCount = 32 - qtyPrice.length - subtotal.length
+            val spaces = if (spacesCount > 0) " ".repeat(spacesCount) else " "
+            writeLine("$qtyPrice$spaces$subtotal")
+        }
+        
+        writeLine("--------------------------------")
+
+        // 4. Total
+        writeCommand(alignRight)
+        writeCommand(boldOn)
+        writeLine("TOTAL: ${formatRupiah(salesData.amount)}")
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        
+        writeCommand(lf)
+
+        // 5. Footer
+        writeCommand(alignCenter)
+        writeLine("TERIMA KASIH")
+        writeLine("Barang yang sudah dibeli")
+        writeLine("tidak dapat ditukar/dikembalikan")
+        writeCommand(lf)
+        writeCommand(lf)
+        writeCommand(lf)
+
+        return bytes.toByteArray()
+    }
+
+    fun generateDeliveryReceiptBytes(delivery: DeliveryItem): ByteArray {
+        val bytes = ArrayList<Byte>()
+
+        // ESC/POS Command Constants
+        val initPrinter = byteArrayOf(0x1B, 0x40)
+        val alignCenter = byteArrayOf(0x1B, 0x61, 0x01)
+        val alignLeft = byteArrayOf(0x1B, 0x61, 0x00)
+        val alignRight = byteArrayOf(0x1B, 0x61, 0x02)
+        val boldOn = byteArrayOf(0x1B, 0x45, 0x01)
+        val boldOff = byteArrayOf(0x1B, 0x45, 0x00)
+        val doubleHeightOn = byteArrayOf(0x1B, 0x21, 0x10)
+        val textNormal = byteArrayOf(0x1B, 0x21, 0x00)
+        val lf = byteArrayOf(0x0A)
+
+        fun writeText(text: String) {
+            bytes.addAll(text.toByteArray(charset("GBK")).toList())
+        }
+
+        fun writeLine(text: String) {
+            writeText(text)
+            bytes.addAll(lf.toList())
+        }
+
+        fun writeCommand(cmd: ByteArray) {
+            bytes.addAll(cmd.toList())
+        }
+
+        // 1. Initialize
+        writeCommand(initPrinter)
+
+        // 2. Header
+        writeCommand(alignCenter)
+        writeCommand(doubleHeightOn)
+        writeCommand(boldOn)
+        writeLine("JOURDROID DELIVERY")
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeLine(formatShortDate(delivery.createdAt))
+        writeLine("Inv: ${delivery.invoice ?: "-"}")
+        writeLine("================================")
+        writeCommand(lf)
+
+        // 3. Body
+        writeCommand(alignLeft)
+        writeLine("Kurir    : ${delivery.courier?.contact?.name ?: "-"}")
+        writeLine("Penerima : ${delivery.receiver?.contact?.name ?: "-"}")
+        writeLine("--------------------------------")
+        writeLine("DARI:")
+        writeLine(delivery.sourceAccount?.warehouse?.name ?: "Pusat")
+        writeLine("KE:")
+        writeLine(delivery.destinationAccount?.warehouse?.name ?: "Tujuan")
+        writeLine("--------------------------------")
+        
+        writeCommand(alignRight)
+        writeCommand(doubleHeightOn)
+        writeCommand(boldOn)
+        writeLine(formatRupiah(delivery.amount))
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeCommand(alignLeft)
+        
+        writeLine("--------------------------------")
+        writeLine("Status: ${delivery.status.uppercase()}")
+        if (!delivery.notes.isNullOrEmpty()) {
+            writeLine("Note: ${delivery.notes}")
+        }
+        writeCommand(lf)
+
+        // 4. Signature area
+        writeCommand(alignCenter)
+        writeLine("Tanda Terima,")
+        writeCommand(lf)
+        writeCommand(lf)
+        writeCommand(lf)
+        writeLine("(....................)")
+        writeCommand(lf)
+
+        // 5. Footer
+        writeLine("TERIMA KASIH")
+        writeCommand(lf)
+        writeCommand(lf)
+        writeCommand(lf)
 
         return bytes.toByteArray()
     }

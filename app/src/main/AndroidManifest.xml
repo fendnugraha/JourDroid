@@ -34,6 +34,10 @@
             </intent-filter>
         </activity>
 
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="jourdroid_alerts" />
+
         <service
             android:name=".service.JourDroidMessagingService"
             android:exported="false">

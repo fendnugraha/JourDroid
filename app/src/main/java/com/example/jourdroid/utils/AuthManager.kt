@@ -37,7 +37,7 @@ class AuthManager(context: Context) {
     // 4. 🟢 Fungsi Ambil Nama Role Spesifik (Jika suatu saat kamu butuh String "Super Admin")
     fun getUserRoleName(): String {
         val user = getUserData()
-        return user?.role?.role ?: "" // Mengambil properti string 'role' dari nested object
+        return user?.role?.toString() ?: "" // Mengambil properti string 'role' dari nested object
     }
 
     // 5. Fungsi Hapus Sesi Saat Logout

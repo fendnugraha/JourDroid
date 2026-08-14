@@ -45,10 +45,10 @@ data class AccountData(
 
 data class AccountItem(
     val id: Int,
-    @SerializedName("acc_name") val accName: String,
-    @SerializedName("acc_code") val accCode: String,
-    @SerializedName("account_group") val accountGroup: String,
-    val account: ParentAccountData? = null, // Changed from List to single object
+    @SerializedName("name") val accName: String,
+    @SerializedName("code") val accCode: String,
+    @SerializedName("group") val accountGroup: String,
+    val account: ParentAccountData? = null,
     @SerializedName("account_id") val accountId: Int,
     @SerializedName("is_locked") val isLocked: Int,
     @SerializedName("warehouse_id") val warehouseId: Int,

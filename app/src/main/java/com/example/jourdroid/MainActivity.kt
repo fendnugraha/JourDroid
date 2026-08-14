@@ -16,6 +16,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -57,8 +58,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Request permission on start if needed
-                LaunchedEffect(Unit) {
+                // Request permission on start and after login
+                LaunchedEffect(isLoggedIn) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -78,9 +79,6 @@ class MainActivity : ComponentActivity() {
                             val token = task.result
                             Log.d("FCM", "FCM Token: $token")
                             
-                            // For debugging only: show token or status
-                            // Toast.makeText(this@MainActivity, "FCM Token retrieved", Toast.LENGTH_SHORT).show()
-                            
                             // Send token to backend
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
@@ -90,7 +88,6 @@ class MainActivity : ComponentActivity() {
                                     } else {
                                         val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                                         Log.e("FCM", "Token update failed: ${response.code()} $errorMsg")
-                                        // Optional: show toast on main thread if you want to notify user
                                     }
                                 } catch (e: Exception) {
                                     Log.e("FCM", "Failed to update token on server", e)

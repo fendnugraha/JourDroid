@@ -7,8 +7,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +37,7 @@ fun DashboardScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val userWarehouseId = user.role?.warehouseId ?: 0
+    val userWarehouseId = user.warehouseId ?: 0
 
     val refreshData = suspend {
         try {
@@ -94,11 +94,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                         ) 
                     },
-                    actions = {
-                        IconButton(onClick = { scope.launch { refreshData() } }, enabled = !isLoading) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                        }
-                    },
+                    actions = {},
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
                     )
@@ -106,76 +102,81 @@ fun DashboardScreen(
             },
             containerColor = Color.Transparent
         ) { innerPadding ->
-            val scrollState = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(scrollState),
-                horizontalAlignment = Alignment.CenterHorizontally
+            PullToRefreshBox(
+                isRefreshing = isLoading,
+                onRefresh = { scope.launch { refreshData() } },
+                modifier = Modifier.padding(innerPadding)
             ) {
-                when {
-                    isLoading -> {
-                        CircularProgressIndicator(modifier = Modifier.padding(32.dp))
-                    }
-                    errorMessage != null -> {
-                        Column(
-                            modifier = Modifier.padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
-                            Button(onClick = { scope.launch { refreshData() } }, modifier = Modifier.padding(top = 8.dp)) {
-                                Text("Coba Lagi")
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(scrollState),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    when {
+                        isLoading && balanceData == null -> {
+                            CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+                        }
+                        errorMessage != null -> {
+                            Column(
+                                modifier = Modifier.padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
+                                Button(onClick = { scope.launch { refreshData() } }, modifier = Modifier.padding(top = 8.dp)) {
+                                    Text("Coba Lagi")
+                                }
                             }
                         }
-                    }
-                    balanceData == null || balanceData?.chartOfAccounts?.isEmpty() == true -> {
-                        Text(
-                            text = "Tidak ada data saldo",
-                            modifier = Modifier.padding(32.dp),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    else -> {
-                        // Summary Cards
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            SummaryCard(
-                                title = "Total Cash",
-                                amount = balanceData?.sumtotalCash ?: 0L,
-                                modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            SummaryCard(
-                                title = "Total Bank",
-                                amount = balanceData?.sumtotalBank ?: 0L,
-                                modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.secondary
+                        balanceData == null || balanceData?.chartOfAccounts?.isEmpty() == true -> {
+                            Text(
+                                text = "Tidak ada data saldo",
+                                modifier = Modifier.padding(32.dp),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
+                        else -> {
+                            // Summary Cards
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                SummaryCard(
+                                    title = "Total Cash",
+                                    amount = balanceData?.sumtotalCash ?: 0L,
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                SummaryCard(
+                                    title = "Total Bank",
+                                    amount = balanceData?.sumtotalBank ?: 0L,
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
 
-                        Text(
-                            text = "Cash & Bank Details",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            modifier = Modifier.align(Alignment.Start).padding(bottom = 12.dp)
-                        )
-                        
-                        CashBankBalance(
-                            accounts = balanceData!!.chartOfAccounts,
-                            modifier = Modifier.heightIn(max = 1000.dp) // Large enough to show all
-                        )
+                            Text(
+                                text = "Cash & Bank Details",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                                modifier = Modifier.align(Alignment.Start).padding(bottom = 12.dp)
+                            )
+                            
+                            CashBankBalance(
+                                accounts = balanceData!!.chartOfAccounts,
+                                modifier = Modifier.heightIn(max = 1000.dp) // Large enough to show all
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Text(
+                        text = "Dashboard Page",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
-                Spacer(modifier = Modifier.height(32.dp))
-                Text(
-                    text = "Dashboard Page",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }

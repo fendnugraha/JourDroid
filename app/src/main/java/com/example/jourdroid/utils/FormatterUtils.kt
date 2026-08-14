@@ -28,6 +28,10 @@ object FormatterUtils {
      * Contoh: 15000 -> "15.000"
      */
     fun formatNumberWithDots(number: Int?): String {
+        return formatNumberWithDots(number?.toLong())
+    }
+
+    fun formatNumberWithDots(number: Long?): String {
         if (number == null) return "0"
         return try {
             NumberFormat.getNumberInstance(Locale("in", "ID")).format(number)

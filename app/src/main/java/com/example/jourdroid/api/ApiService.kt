@@ -1,26 +1,14 @@
 package com.example.jourdroid.api
 
-import com.example.jourdroid.data.AccountData
-import com.example.jourdroid.data.CashBankBalanceData
-import com.example.jourdroid.data.LoginResponse
-import com.example.jourdroid.data.MutationJournalData
-import com.example.jourdroid.data.WarehouseData
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
+import com.example.jourdroid.data.*
+import retrofit2.http.*
 
 interface ApiService {
     // 1. Endpoint untuk Login (Tidak butuh token)
-    @FormUrlEncoded
     @POST("api/android/login")
     suspend fun login(
-        @Field("email") email: String,
-        @Field("password") password: String
-    ): LoginResponse
+        @Body request: LoginRequest
+    ): retrofit2.Response<LoginResponse>
 
     // 2. Endpoint yang butuh Bearer Token (Proteksi Sanctum)
     @GET("api/android/user-profile")
@@ -40,6 +28,34 @@ interface ApiService {
     @GET("api/get-all-warehouses")
     suspend fun getAllWarehouses(): WarehouseData
 
+    @GET("api/get-all-products")
+    suspend fun getAllProducts(): ProductData
+
+    //Deliveries
+    @GET("api/deliveries")
+    suspend fun getDeliveries(): DeliveryData
+
+    @FormUrlEncoded
+    @POST("api/deliveries/{id}/process")
+    suspend fun processDelivery(
+        @Path("id") id: String,
+        @Field("latitude") latitude: Double? = null,
+        @Field("longitude") longitude: Double? = null
+    ): retrofit2.Response<Unit>
+
+    @FormUrlEncoded
+    @POST("api/deliveries/{id}/complete")
+    suspend fun completeDelivery(
+        @Path("id") id: String,
+        @Field("latitude") latitude: Double? = null,
+        @Field("longitude") longitude: Double? = null,
+        @Field("amount") amount: Long? = null,
+        @Field("note") note: String? = null
+    ): retrofit2.Response<Unit>
+
+    @POST("api/deliveries/{id}/cancel")
+    suspend fun cancelDelivery(@Path("id") id: String): retrofit2.Response<Unit>
+
 
     @GET("api/get-journal-by-warehouse/{warehouse}/{startDate}/{endDate}")
     suspend fun getJournalByWarehouse(
@@ -53,6 +69,19 @@ interface ApiService {
         @Path("warehouse") warehouse: Int,
         @Path("endDate") endDate: String
     ): CashBankBalanceData
+
+    // POS / Transactions
+    @POST("api/transactions")
+    suspend fun submitTransaction(
+        @Body request: TransactionRequest
+    ): SalesTransactionResponse
+
+    @GET("api/get-tx-by-warehouse/{warehouse}/{startDate}/{endDate}")
+    suspend fun getTxByWarehouse(
+        @Path("warehouse") warehouse: Int,
+        @Path("startDate") startDate: String,
+        @Path("endDate") endDate: String
+    ): SalesTransactionResponse
 
     //Transaction
     @FormUrlEncoded
@@ -81,3 +110,9 @@ interface ApiService {
     ): retrofit2.Response<Unit>
 
 }
+
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+

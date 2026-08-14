@@ -17,9 +17,10 @@ data class CashBankBalanceItem(
 data class ChartOfAccounts(
     val id: Int,
     @SerializedName("account_id") val accountId: Int,
-    @SerializedName("acc_name") val accName: String,
-    @SerializedName("acc_code") val accCode: String,
-    @SerializedName("account_group") val accountGroup: String,
+    @SerializedName("name") val accName: String,
+    @SerializedName("code") val accCode: String,
+    @SerializedName("group") val accountGroup: String,
+    @SerializedName("is_primary_cash") val isPrimaryCash: Int,
     val balance: Long,
     @SerializedName("warehouse_id") val warehouseId: Int
 )

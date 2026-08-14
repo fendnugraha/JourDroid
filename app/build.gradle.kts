@@ -60,4 +60,7 @@ dependencies {
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    
+    // Play Services Location
+    implementation(libs.play.services.location)
 }

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jourdroid.R
 import com.example.jourdroid.api.ApiClient
+import com.example.jourdroid.api.LoginRequest
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.utils.AuthManager
 import kotlinx.coroutines.launch
@@ -201,20 +202,46 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
                             isLoading = true
                             scope.launch {
                                 try {
-                                    val apiService = ApiClient.getApiService(context)
-                                    val response = apiService.login(email, password)
+                                    val trimmedEmail = email.trim()
+                                    // Password should NOT be trimmed as it may contain trailing spaces intentionally
+                                    val finalPassword = password
 
-                                    if (response.success && response.token != null) {
-                                        authManager.saveToken(response.token)
-                                        response.user?.let { user ->
-                                            authManager.saveUserData(user)
-                                            Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-                                            onLoginSuccess(user)
+                                    // 🟢 DIAGNOSTIC LOGGING
+                                    android.util.Log.d("LOGIN_DEBUG", "Email: [$trimmedEmail]")
+                                    android.util.Log.d("LOGIN_DEBUG", "Password length: ${finalPassword.length}")
+                                    
+                                    val apiService = ApiClient.getApiService(context)
+                                    val response = apiService.login(LoginRequest(trimmedEmail, finalPassword))
+
+                                    if (response.isSuccessful) {
+                                        val loginData = response.body()
+                                        if (loginData != null && loginData.success && loginData.token != null) {
+                                            authManager.saveToken(loginData.token)
+                                            loginData.user?.let { user ->
+                                                authManager.saveUserData(user)
+                                                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                                                onLoginSuccess(user)
+                                            }
+                                        } else {
+                                            val msg = loginData?.message ?: "Login failed"
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                         }
                                     } else {
-                                        Toast.makeText(context, response.message, Toast.LENGTH_LONG).show()
+                                        // Parse error message from Laravel response if available
+                                        val errorBody = response.errorBody()?.string()
+                                        val errorMessage = try {
+                                            val gson = com.google.gson.Gson()
+                                            val errorObj = gson.fromJson(errorBody, com.example.jourdroid.data.LoginResponse::class.java)
+                                            errorObj.message ?: "Authentication failed (${response.code()})"
+                                        } catch (e: Exception) {
+                                            "Error: ${response.code()} ${response.message()}"
+                                        }
+                                        
+                                        android.util.Log.e("LOGIN_DEBUG", "Login Failed: $errorBody")
+                                        Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                     }
                                 } catch (e: Exception) {
+                                    android.util.Log.e("LOGIN_DEBUG", "Network error", e)
                                     Toast.makeText(context, "Network Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                 } finally {
                                     isLoading = false
