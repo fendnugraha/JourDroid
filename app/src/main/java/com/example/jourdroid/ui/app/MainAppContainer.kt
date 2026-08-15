@@ -20,8 +20,10 @@ import com.example.jourdroid.ui.app.transaction.TransactionScreen
 import com.example.jourdroid.ui.app.profile.ProfileScreen
 import com.example.jourdroid.ui.app.delivery.DeliveryScreen
 import com.example.jourdroid.ui.app.task.TaskScreen
-import com.example.jourdroid.ui.app.pos.PosScreen
+import com.example.jourdroid.ui.app.pos.SalesScreen
 import com.example.jourdroid.ui.app.attendance.AttendanceScreen
+import com.example.jourdroid.ui.app.attendance.AttendanceSuccessScreen
+import com.example.jourdroid.data.AttendanceData
 import kotlinx.coroutines.launch
 
 sealed class Screen(
@@ -73,16 +75,18 @@ fun MainAppContainer(
     user: UserData,
     onLogoutClick: () -> Unit
 ) {
+    var currentUser by remember { mutableStateOf(user) }
     val scope = rememberCoroutineScope()
-    val userRole = user.role?.toString() ?: ""
+    val userRole = currentUser.role?.toString() ?: ""
     val isCourier = userRole.equals("Courier", ignoreCase = true)
     
     // Bypass attendance for Admins
     val isAdmin = listOf("Administrator", "Super Admin")
         .any { it.equals(userRole, ignoreCase = true) }
     
-    var hasCheckedInState by remember { mutableStateOf(user.hasCheckedIn == true) }
+    var hasCheckedInState by remember { mutableStateOf(currentUser.hasCheckedIn == true) }
     var isNavigatingToAttendance by remember { mutableStateOf(false) }
+    var attendanceSuccessData by remember { mutableStateOf<AttendanceData?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -108,9 +112,7 @@ fun MainAppContainer(
         }
         
         // Task screen for courier or admins
-        val canSeeTask = isCourier || listOf("Administrator", "Super Admin")
-            .any { it.equals(userRole, ignoreCase = true) }
-        if (canSeeTask) {
+        if (isCourier) {
             list.add(Screen.Task)
         }
 
@@ -122,7 +124,8 @@ fun MainAppContainer(
         }
 
         // POS screen for non-courier
-        if (!isCourier) {
+        if (listOf("Cashier", "Co-Cashier")
+                .any { it.equals(userRole, ignoreCase = true) }) {
             list.add(Screen.POS)
         }
         
@@ -148,10 +151,17 @@ fun MainAppContainer(
         ) 
     }
 
-    if (isNavigatingToAttendance) {
+    if (attendanceSuccessData != null) {
+        AttendanceSuccessScreen(
+            userName = currentUser.name ?: "User",
+            attendanceData = attendanceSuccessData!!,
+            onDone = { attendanceSuccessData = null }
+        )
+    } else if (isNavigatingToAttendance) {
         AttendanceScreen(
-            user = user,
-            onSuccess = { 
+            user = currentUser,
+            onSuccess = { data ->
+                attendanceSuccessData = data
                 hasCheckedInState = true
                 isNavigatingToAttendance = false
             },
@@ -205,7 +215,7 @@ fun MainAppContainer(
             ) { screen ->
                 when (screen) {
                     is Screen.Dashboard -> DashboardScreen(
-                        user = user,
+                        user = currentUser,
                         hasCheckedIn = hasCheckedInState,
                         onNavigateToAttendance = {
                             scope.launch {
@@ -225,11 +235,18 @@ fun MainAppContainer(
                             }
                         }
                     )
-                    is Screen.Task -> TaskScreen(user = user)
-                    is Screen.Delivery -> DeliveryScreen(user = user)
-                    is Screen.POS -> PosScreen(user = user)
-                    is Screen.Transactions -> TransactionScreen(user = user)
-                    is Screen.Profile -> ProfileScreen(user = user, onLogoutClick = onLogoutClick)
+                    is Screen.Task -> TaskScreen(user = currentUser)
+                    is Screen.Delivery -> DeliveryScreen(user = currentUser)
+                    is Screen.POS -> SalesScreen(user = currentUser)
+                    is Screen.Transactions -> TransactionScreen(user = currentUser)
+                    is Screen.Profile -> ProfileScreen(
+                        user = currentUser, 
+                        onLogoutClick = onLogoutClick,
+                        onUserUpdate = { newUser -> 
+                            currentUser = newUser
+                            hasCheckedInState = newUser.hasCheckedIn == true
+                        }
+                    )
                 }
             }
         }

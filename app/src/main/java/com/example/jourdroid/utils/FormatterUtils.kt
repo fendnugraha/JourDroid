@@ -56,9 +56,40 @@ object FormatterUtils {
     fun formatTimeOnly(timeStr: String?): String {
         if (timeStr.isNullOrEmpty()) return "-"
         return try {
-            timeStr.substring(11, 19)
+            if (timeStr.contains("T")) {
+                timeStr.substring(11, 19)
+            } else if (timeStr.length >= 19) {
+                timeStr.substring(11, 19)
+            } else {
+                timeStr
+            }
         } catch (e: Exception) {
             timeStr
+        }
+    }
+
+    /**
+     * Mengubah format ISO 8601 atau YYYY-MM-DD menjadi format yang lebih rapi dengan Nama Hari
+     * Contoh: "2026-08-15T09:59:09.778372Z" -> "Sabtu, 15 Agustus 2026"
+     */
+    fun formatLongDate(dateStr: String?): String {
+        if (dateStr.isNullOrEmpty()) return "-"
+        return try {
+            val date = if (dateStr.contains("T")) {
+                // ISO format: "2026-08-15T09:59:09.778372Z"
+                val cleanedStr = dateStr.substring(0, 19).replace("T", " ")
+                val isoFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                isoFormat.parse(cleanedStr)
+            } else {
+                // YYYY-MM-DD format
+                val shortFormat = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                shortFormat.parse(dateStr)
+            }
+            
+            val outputFormat = java.text.SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+            outputFormat.format(date!!)
+        } catch (e: Exception) {
+            formatShortDate(dateStr)
         }
     }
 }

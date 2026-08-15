@@ -35,8 +35,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
 import com.example.jourdroid.api.ApiClient
+import com.example.jourdroid.data.AttendanceData
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.data.WarehouseItem
+import com.example.jourdroid.utils.FormatterUtils
 import com.example.jourdroid.utils.ImageUtils
 import com.example.jourdroid.utils.LocationHelper
 import kotlinx.coroutines.launch
@@ -54,7 +56,7 @@ private const val FILE_PROVIDER_AUTHORITY = "com.example.jourdroid.fileprovider"
 @Composable
 fun AttendanceScreen(
     user: UserData,
-    onSuccess: () -> Unit,
+    onSuccess: (AttendanceData) -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -406,15 +408,15 @@ fun AttendanceScreen(
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     InfoTile(
-                        icon = Icons.Default.Schedule,
-                        label = "Jam Absen",
-                        value = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()) },
+                        icon = Icons.Default.CalendarToday,
+                        label = "Tanggal",
+                        value = remember { SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date()) },
                         modifier = Modifier.weight(1f)
                     )
                     InfoTile(
-                        icon = Icons.Default.AutoAwesome,
-                        label = "Status",
-                        value = "Ready",
+                        icon = Icons.Default.Schedule,
+                        label = "Jam Absen",
+                        value = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -451,12 +453,25 @@ fun AttendanceScreen(
                                 val statusResponse = apiService.getUserCheckedInStatus()
                                 if (statusResponse.hasCheckedIn) {
                                     Toast.makeText(context, "Anda sudah melakukan absen hari ini.", Toast.LENGTH_LONG).show()
-                                    onSuccess()
+                                    // Fallback data if already checked in
+                                    onSuccess(AttendanceData(
+                                        id = null,
+                                        userId = user.id,
+                                        warehouseId = user.warehouseId,
+                                        photo = null,
+                                        timeIn = "--:--",
+                                        date = "Today",
+                                        note = null,
+                                        longitude = null,
+                                        latitude = null,
+                                        approvalStatus = "Already Checked In",
+                                        warehouseName = user.warehouse?.name ?: "Warehouse"
+                                    ))
                                     return@launch
                                 }
 
                                 // 🟢 2. Proceed with submission if not checked in
-                                val compressedFile = ImageUtils.compressImage(context, capturedPhotoUri!!, 500)
+                                val compressedFile = ImageUtils.compressImage(context, capturedPhotoUri!!, 300) // 🟢 Reduced to 300KB for faster upload
                                 val requestFile = compressedFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                                 val photoPart = MultipartBody.Part.createFormData("photo", compressedFile.name, requestFile)
                                 
@@ -476,7 +491,22 @@ fun AttendanceScreen(
                                 )
 
                                 if (response.isSuccessful) {
-                                    onSuccess()
+                                    val attendanceData = response.body()?.data?.copy(
+                                        warehouseName = nearestWarehouse?.name
+                                    ) ?: AttendanceData(
+                                        id = null,
+                                        userId = user.id,
+                                        warehouseId = nearestWarehouse?.id,
+                                        photo = null,
+                                        timeIn = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()),
+                                        date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                                        note = null,
+                                        longitude = currentLocation!!.longitude.toString(),
+                                        latitude = currentLocation!!.latitude.toString(),
+                                        approvalStatus = "Pending",
+                                        warehouseName = nearestWarehouse?.name
+                                    )
+                                    onSuccess(attendanceData)
                                 } else {
                                     errorMessage = "Absensi gagal: ${response.code()}"
                                 }

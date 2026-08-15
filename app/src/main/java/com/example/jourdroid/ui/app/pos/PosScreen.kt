@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.SwipeToDismissBoxValue.*
@@ -48,7 +49,9 @@ data class CartEntry(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PosScreen(
-    user: UserData
+    user: UserData,
+    onBack: () -> Unit,
+    onSuccess: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -164,6 +167,7 @@ fun PosScreen(
 
                     cartMap = emptyMap()
                     isCartModalOpen = false
+                    onSuccess() // 🟢 Trigger refresh in background
                     Toast.makeText(context, "Transaksi Berhasil!", Toast.LENGTH_SHORT).show()
                 } else {
                     val msg = response.message ?: "Server error"
@@ -187,7 +191,12 @@ fun PosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Point of Sales", fontWeight = FontWeight.Bold) }
+                title = { Text("Point of Sales", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -541,6 +550,22 @@ fun ProductCard(
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                 )
+                
+                // Stock Badge (Overlay)
+                Surface(
+                    color = if (product.stock > 0) Color(0xFF4CAF50).copy(alpha = 0.9f) else MaterialTheme.colorScheme.error.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(bottomStart = 12.dp, topEnd = 0.dp),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = "Stok: ${product.stock}",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -564,21 +589,6 @@ fun ProductCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = if (product.stock > 0) Color(0xFF4CAF50).copy(alpha = 0.1f) else MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-                    shape = CircleShape
-                ) {
-                    Text(
-                        text = "Stok: ${product.stock}",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (product.stock > 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            
             Spacer(modifier = Modifier.height(12.dp))
             
             if (quantity == 0) {

@@ -7,10 +7,13 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import com.example.jourdroid.data.DeliveryItem
 import com.example.jourdroid.data.JournalData
+import com.example.jourdroid.data.DailyDashboardData
 import com.example.jourdroid.data.SalesData
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import com.example.jourdroid.utils.FormatterUtils.formatShortDate
 import java.io.OutputStream
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 class BluetoothPrinterManager(private val context: Context) {
@@ -286,12 +289,12 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(alignCenter)
         writeCommand(doubleHeightOn)
         writeCommand(boldOn)
-        writeLine("JOURDROID POS")
+        writeLine("BRILINK THREEKOMUNIKA")
         writeCommand(boldOff)
         writeCommand(textNormal)
         writeLine(warehouseName ?: "Store Branch")
         writeLine(salesData.dateIssued ?: "-")
-        writeLine("Inv: ${salesData.invoice ?: salesData.id}")
+        writeLine("${salesData.invoice ?: salesData.id}")
         writeLine("Cashier: ${agentName ?: "Staff"}")
         writeLine("================================")
 
@@ -365,7 +368,7 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(alignCenter)
         writeCommand(doubleHeightOn)
         writeCommand(boldOn)
-        writeLine("JOURDROID DELIVERY")
+        writeLine("BRILINK THREEKOMUNIKA")
         writeCommand(boldOff)
         writeCommand(textNormal)
         writeLine(formatShortDate(delivery.createdAt))
@@ -378,9 +381,7 @@ class BluetoothPrinterManager(private val context: Context) {
         writeLine("Kurir    : ${delivery.courier?.contact?.name ?: "-"}")
         writeLine("Penerima : ${delivery.receiver?.contact?.name ?: "-"}")
         writeLine("--------------------------------")
-        writeLine("DARI:")
-        writeLine(delivery.sourceAccount?.warehouse?.name ?: "Pusat")
-        writeLine("KE:")
+        writeLine("TUJUAN:")
         writeLine(delivery.destinationAccount?.warehouse?.name ?: "Tujuan")
         writeLine("--------------------------------")
         
@@ -409,6 +410,117 @@ class BluetoothPrinterManager(private val context: Context) {
         writeCommand(lf)
 
         // 5. Footer
+        writeLine("TERIMA KASIH")
+        writeCommand(lf)
+        writeCommand(lf)
+        writeCommand(lf)
+
+        return bytes.toByteArray()
+    }
+
+    fun generateReportReceiptBytes(data: DailyDashboardData, warehouseName: String?, personalNote: String? = null): ByteArray {
+        val bytes = ArrayList<Byte>()
+        val openingCash = 9000000
+
+        // ESC/POS Command Constants
+        val initPrinter = byteArrayOf(0x1B, 0x40)
+        val alignCenter = byteArrayOf(0x1B, 0x61, 0x01)
+        val alignLeft = byteArrayOf(0x1B, 0x61, 0x00)
+        val alignRight = byteArrayOf(0x1B, 0x61, 0x02)
+        val boldOn = byteArrayOf(0x1B, 0x45, 0x01)
+        val boldOff = byteArrayOf(0x1B, 0x45, 0x00)
+        val doubleHeightOn = byteArrayOf(0x1B, 0x21, 0x10)
+        val textNormal = byteArrayOf(0x1B, 0x21, 0x00)
+        val lf = byteArrayOf(0x0A)
+
+        fun writeText(text: String) {
+            bytes.addAll(text.toByteArray(charset("GBK")).toList())
+        }
+
+        fun writeLine(text: String) {
+            writeText(text)
+            bytes.addAll(lf.toList())
+        }
+
+        fun writeCommand(cmd: ByteArray) {
+            bytes.addAll(cmd.toList())
+        }
+
+        fun writeRow(label: String, value: Long, isBold: Boolean = false) {
+            writeCommand(alignLeft)
+            if (isBold) writeCommand(boldOn)
+            writeText(label.padEnd(16)) // Fixed width for alignment
+            writeCommand(alignRight)
+            writeLine(formatRupiah(value))
+            if (isBold) writeCommand(boldOff)
+        }
+
+        // Calculations
+        val totalRevenue = data.totalFee + data.totalCash +
+                (data.totalCashDeposit?.total ?: 0) +
+                (data.totalAccessories?.total ?: 0) +
+                (data.totalVoucher?.total ?: 0) +
+                data.totalExpense
+
+        val totalDisetor = if (data.totalCash > openingCash) {
+            totalRevenue - openingCash
+        } else {
+            totalRevenue
+        }
+
+        // 1. Initialize
+        writeCommand(initPrinter)
+
+        // 2. Header
+        writeCommand(alignCenter)
+        writeCommand(doubleHeightOn)
+        writeCommand(boldOn)
+        writeLine("DAILY REPORT")
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeLine(warehouseName ?: "Gudang Utama")
+        writeLine(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()))
+        writeLine("================================")
+        writeCommand(lf)
+
+        // 3. Body
+        writeRow("Uang Tunai", data.totalCash.toLong())
+        writeRow("Voucher", (data.totalVoucher?.total ?: 0).toLong())
+        writeRow("Accessories", (data.totalAccessories?.total ?: 0).toLong())
+        writeRow("Deposit", (data.totalCashDeposit?.total ?: 0).toLong())
+        writeRow("Koreksi", data.totalCorrection.toLong())
+        writeRow("Fee Jasa", data.totalFee.toLong())
+        writeLine("--------------------------------")
+
+        writeRow("Biaya Ops", data.totalExpense.toLong())
+        writeLine("--------------------------------")
+
+        writeRow("Total Pendapatan", totalRevenue.toLong(), true)
+        writeCommand(lf)
+
+        writeLine("--------------------------------")
+        writeCommand(alignLeft)
+        writeLine("TOTAL UANG DISETOR:")
+        writeCommand(alignRight)
+        writeCommand(doubleHeightOn)
+        writeCommand(boldOn)
+        writeLine(formatRupiah(totalDisetor.toLong()))
+        writeCommand(boldOff)
+        writeCommand(textNormal)
+        writeCommand(lf)
+
+        // 4. Personal Note
+        if (!personalNote.isNullOrBlank()) {
+            writeLine("--------------------------------")
+            writeCommand(alignLeft)
+            writeLine("NOTE:")
+            writeLine(personalNote)
+            writeCommand(lf)
+        }
+
+        // 5. Footer
+        writeCommand(alignCenter)
+        writeLine("================================")
         writeLine("TERIMA KASIH")
         writeCommand(lf)
         writeCommand(lf)

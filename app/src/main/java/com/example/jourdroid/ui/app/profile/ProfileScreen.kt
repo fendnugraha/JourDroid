@@ -36,7 +36,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     user: UserData,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onUserUpdate: (UserData) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -298,13 +299,34 @@ fun ProfileScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    
                                     if (user.emailVerifiedAt != null) {
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = "Verified",
-                                            modifier = Modifier.size(13.dp),
-                                            tint = Color(0xFF03A9F4)
-                                        )
+                                        Surface(
+                                            color = Color(0xFFE0F2FE),
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.padding(start = 2.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Verified,
+                                                    contentDescription = "Verified",
+                                                    modifier = Modifier.size(10.dp),
+                                                    tint = Color(0xFF0284C7)
+                                                )
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text(
+                                                    text = "Verified",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color(0xFF0284C7)
+                                                    )
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -326,8 +348,14 @@ fun ProfileScreen(
                                 .clickable(enabled = !isCheckedIn) {
                                     scope.launch {
                                         try {
-                                            val statusResponse = ApiClient.getApiService(context).getUserCheckedInStatus()
+                                            val apiService = ApiClient.getApiService(context)
+                                            val statusResponse = apiService.getUserCheckedInStatus()
                                             isCheckedIn = statusResponse.hasCheckedIn
+                                            
+                                            // 🟢 Refresh full user data to update warehouse_id etc
+                                            val profileResponse = apiService.getUserProfile()
+                                            profileResponse.user?.let { onUserUpdate(it) }
+                                            
                                             if (!isCheckedIn) showAttendanceForm = true
                                         } catch (e: Exception) {
                                             showAttendanceForm = true
@@ -398,6 +426,13 @@ fun ProfileScreen(
                     onSuccess = {
                         showAttendanceForm = false
                         isCheckedIn = true
+                        // 🟢 Refresh full user data after attendance success
+                        scope.launch {
+                            try {
+                                val profileResponse = ApiClient.getApiService(context).getUserProfile()
+                                profileResponse.user?.let { onUserUpdate(it) }
+                            } catch (_: Exception) {}
+                        }
                     }
                 )
 

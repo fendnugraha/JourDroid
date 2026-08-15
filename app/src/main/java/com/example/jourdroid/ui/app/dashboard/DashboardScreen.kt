@@ -4,9 +4,12 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -164,16 +167,18 @@ fun DashboardScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     SummaryCard(
-                                        title = "Total Cash",
+                                        title = "Cash",
                                         amount = balanceData?.sumtotalCash ?: 0L,
                                         modifier = Modifier.weight(1f),
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
+                                        icon = Icons.Default.AccountBalanceWallet
                                     )
                                     SummaryCard(
-                                        title = "Total Bank",
+                                        title = "Bank",
                                         amount = balanceData?.sumtotalBank ?: 0L,
                                         modifier = Modifier.weight(1f),
-                                        color = MaterialTheme.colorScheme.secondary
+                                        color = Color(0xFF0EA5E9),
+                                        icon = Icons.Default.AccountBalance
                                     )
                                 }
 
@@ -184,18 +189,10 @@ fun DashboardScreen(
                                 )
                                 
                                 CashBankBalance(
-                                    accounts = balanceData!!.chartOfAccounts,
-                                    modifier = Modifier.heightIn(max = 1000.dp) // Large enough to show all
+                                    accounts = balanceData!!.chartOfAccounts
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Text(
-                            text = "Dashboard Page",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
             }
@@ -208,22 +205,51 @@ fun SummaryCard(
     title: String,
     amount: Long,
     modifier: Modifier = Modifier,
-    color: Color
+    color: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
 ) {
     ElevatedCard(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(color.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = color
+                    )
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
             Text(
                 text = formatRupiah(amount),
                 style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                    fontSize = 14.sp
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    letterSpacing = (-0.5).sp
                 ),
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis

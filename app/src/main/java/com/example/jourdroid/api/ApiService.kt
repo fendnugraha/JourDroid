@@ -1,6 +1,7 @@
 package com.example.jourdroid.api
 
 import com.example.jourdroid.data.*
+import com.example.jourdroid.data.deposit.DepositCreatedResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.http.*
@@ -15,6 +16,15 @@ interface ApiService {
     // 2. Endpoint yang butuh Bearer Token (Proteksi Sanctum)
     @GET("api/android/user-profile")
     suspend fun getUserProfile(): LoginResponse
+
+    @FormUrlEncoded
+    @POST("api/users/{id}/update-password")
+    suspend fun updatePassword(
+        @Path("id") id: Int,
+        @Field("oldPassword") oldPassword: String,
+        @Field("password") password: String,
+        @Field("confirmPassword") confirmPassword: String
+    ): retrofit2.Response<Unit>
 
     @GET("api/checkin-status")
     suspend fun getUserCheckedInStatus(): CheckInStatusResponse
@@ -81,6 +91,13 @@ interface ApiService {
         @Path("endDate") endDate: String
     ): CashBankBalanceData
 
+    @GET("/api/daily-dashboard")
+    suspend fun getDailyDashboard(
+        @Query("warehouse") warehouse: Int,
+        @Query("startDate") startDate: String,
+        @Query("endDate") endDate: String
+    ): DailyDashboardResponse
+
     // POS / Transactions
     @POST("api/transactions")
     suspend fun submitTransaction(
@@ -99,14 +116,24 @@ interface ApiService {
     @POST("api/create-mutation")
     suspend fun createMutation(
         @Field("date_issued") dateIssued: String,
-        @Field("debt_code") debtCode: Int,
-        @Field("cred_code") credCode: Int,
-        @Field("is_confirmed") isConfirmed: Int, 
+        @Field("debt_id") debtCode: Int,
+        @Field("cred_id") credCode: Int,
+        @Field("is_confirmed") isConfirmed: Int,
         @Field("amount") amount: Int,
         @Field("fee_amount") feeAmount: Int,
         @Field("trx_type") trxType: String,
         @Field("description") description: String,
-    ): retrofit2.Response<com.example.jourdroid.data.MutationCreateResponse>
+    ): retrofit2.Response<MutationCreateResponse>
+
+//    /api/create-deposit
+    @FormUrlEncoded
+    @POST("/api/create-deposit")
+    suspend fun createDeposit(
+        @Field("date_issued") dateIssued: String,
+        @Field("price") price: Int,
+        @Field("cost") cost: Int,
+        @Field("description") description: String,
+    ): retrofit2.Response<DepositCreatedResponse>
 
     @PUT("api/update-delivery-status/{id}/{status}")
     suspend fun updateJournalStatus(
@@ -129,7 +156,7 @@ interface ApiService {
         @Part("warehouse_id") warehouseId: RequestBody,
         @Part("role") role: RequestBody,
         @Part("time_in") timeIn: RequestBody
-    ): retrofit2.Response<Unit>
+    ): retrofit2.Response<com.example.jourdroid.data.AttendanceResponse>
 
 }
 

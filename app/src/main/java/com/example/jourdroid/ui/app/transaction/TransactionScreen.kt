@@ -362,7 +362,7 @@ fun TransactionScreen(
                         value = searchTerm,
                         onValueChange = { searchTerm = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search by description, account, invoice...") },
+                        placeholder = { Text("Search...") },
                         leadingIcon = {
                             Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
                         },
