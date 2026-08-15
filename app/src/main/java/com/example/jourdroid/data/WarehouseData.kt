@@ -53,6 +53,7 @@ data class WarehouseItem(
     @SerializedName("opening_time") val openingTime: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val distance: Double? = null,
     val status: Int = 1,
     @SerializedName("contact_id") val contactId: Int? = null,
     @SerializedName("warehouse_zone_id") val warehouseZoneId: Int? = null

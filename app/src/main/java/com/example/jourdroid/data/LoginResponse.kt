@@ -1,5 +1,6 @@
 package com.example.jourdroid.data
 
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 
 data class LoginResponse (
@@ -57,8 +58,28 @@ data class PrimaryCash(
     @SerializedName("is_primary_cash") val isPrimaryCash: Int? = null,
     @SerializedName("st_balance") val stBalance: Long? = null,
     @SerializedName("is_locked") val isLocked: Int? = null,
-    val limit: Long? = null
-)
+    @SerializedName("limit") private val rawLimit: JsonElement? = null
+) {
+    val limit: Long?
+        get() = try {
+            when {
+                rawLimit == null || rawLimit.isJsonNull -> null
+                rawLimit.isJsonPrimitive -> rawLimit.asLong
+                rawLimit.isJsonObject -> {
+                    val obj = rawLimit.asJsonObject
+                    when {
+                        obj.has("limit") -> obj.get("limit").asLong
+                        obj.has("amount") -> obj.get("amount").asLong
+                        obj.has("value") -> obj.get("value").asLong
+                        else -> null
+                    }
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+}
 
 data class ContactData(
     val id: Int,

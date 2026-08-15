@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -133,19 +134,41 @@ fun PosScreen(
 
                 val request = TransactionRequest(
                     cart = cartItems,
-                    transactionType = "Sales"
+                    transactionType = "Sales",
+                    warehouseId = userWarehouseId
                 )
 
                 val response = apiService.submitTransaction(request)
-                    if (response.success && response.data != null) {
-                        salesResult = response.data
-                        cartMap = emptyMap()
-                        isCartModalOpen = false
-                        Toast.makeText(context, "Transaksi Berhasil!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val msg = response.message ?: "Server error"
-                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                if (response.success) {
+                    // Reset Cart
+                    val finalItems = cartMap.filter { it.value.quantity > 0 }.map { (id, entry) ->
+                        val product = products.find { it.id == id }!!
+                        val unitPrice = entry.customPrice ?: product.priceLong
+                        SalesItem(
+                            id = id,
+                            productName = product.name,
+                            quantity = entry.quantity,
+                            price = unitPrice,
+                            subtotal = unitPrice * entry.quantity
+                        )
                     }
+
+                    salesResult = response.data ?: SalesData(
+                        id = 0,
+                        invoice = response.invoice,
+                        dateIssued = "Baru Saja",
+                        amount = totalAmount,
+                        status = 1,
+                        items = finalItems
+                    )
+
+                    cartMap = emptyMap()
+                    isCartModalOpen = false
+                    Toast.makeText(context, "Transaksi Berhasil!", Toast.LENGTH_SHORT).show()
+                } else {
+                    val msg = response.message ?: "Server error"
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
                 } catch (e: Exception) {
                     val errorMsg = if (e.localizedMessage?.contains("500") == true) 
                         "Kesalahan Server (500). Hubungi Admin."
@@ -164,16 +187,7 @@ fun PosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Point of Sales", fontWeight = FontWeight.Bold) },
-                actions = {
-                    if (cartMap.isNotEmpty()) {
-                        BadgedBox(badge = { Badge { Text(totalItems.toString()) } }) {
-                            IconButton(onClick = { isCartModalOpen = true }) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
-                            }
-                        }
-                    }
-                }
+                title = { Text("Point of Sales", fontWeight = FontWeight.Bold) }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -288,49 +302,40 @@ fun PosScreen(
                 ) {
                     Row(
                         modifier = Modifier
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                            .padding(horizontal = 24.dp, vertical = 14.dp)
                             .clickable { isCartModalOpen = true },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.Start
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            BadgedBox(
-                                badge = { 
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = Color.White
-                                    ) { Text(totalItems.toString()) } 
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Default.ShoppingCart, 
-                                    null, 
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                        BadgedBox(
+                            badge = { 
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = Color.White
+                                ) { Text(totalItems.toString()) } 
                             }
-                            Spacer(Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    "Total Pembayaran", 
-                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f), 
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Text(
-                                    formatRupiah(totalAmount), 
-                                    color = MaterialTheme.colorScheme.onPrimary, 
-                                    fontWeight = FontWeight.ExtraBold, 
-                                    fontSize = 18.sp
-                                )
-                            }
+                        ) {
+                            Icon(
+                                Icons.Default.ShoppingCart, 
+                                null, 
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
-                        
-                        Icon(
-                            Icons.Default.ArrowForward, 
-                            null, 
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "Total Pembayaran", 
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f), 
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                formatRupiah(totalAmount), 
+                                color = MaterialTheme.colorScheme.onPrimary, 
+                                fontWeight = FontWeight.ExtraBold, 
+                                fontSize = 18.sp
+                            )
+                        }
                     }
                 }
             }
@@ -380,49 +385,20 @@ fun PosScreen(
                         .verticalScroll(rememberScrollState())
                 ) {
                     cartItems.forEach { (product, entry) ->
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = {
-                                if (it == EndToStart) {
-                                    cartMap = cartMap.toMutableMap().apply { remove(product.id) }
-                                    if (cartMap.isEmpty()) isCartModalOpen = false
-                                    true
-                                } else false
-                            }
+                        CartRow(
+                            product = product, 
+                            entry = entry,
+                            onQuantityChange = { newQty ->
+                                cartMap = cartMap.toMutableMap().apply {
+                                    put(product.id, entry.copy(quantity = newQty))
+                                }
+                            },
+                            onRemove = { 
+                                cartMap = cartMap.toMutableMap().apply { remove(product.id) }
+                                if (cartMap.isEmpty()) isCartModalOpen = false
+                            },
+                            onEditPrice = { editingProduct = product to entry }
                         )
-
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = false,
-                            backgroundContent = {
-                                val color = when (dismissState.dismissDirection) {
-                                    EndToStart -> MaterialTheme.colorScheme.error
-                                    else -> Color.Transparent
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color, RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Hapus",
-                                        tint = Color.White
-                                    )
-                                }
-                            }
-                        ) {
-                            CartRow(
-                                product = product, 
-                                entry = entry,
-                                onRemove = { 
-                                    cartMap = cartMap.toMutableMap().apply { remove(product.id) }
-                                    if (cartMap.isEmpty()) isCartModalOpen = false
-                                },
-                                onEditPrice = { editingProduct = product to entry }
-                            )
-                        }
                         
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 4.dp), 
@@ -647,71 +623,154 @@ fun ProductCard(
 
 @Composable
 fun CartRow(
-    product: ProductItem, 
+    product: ProductItem,
     entry: CartEntry,
+    onQuantityChange: (Int) -> Unit,
     onRemove: () -> Unit,
     onEditPrice: () -> Unit
 ) {
     val unitPrice = entry.customPrice ?: product.priceLong
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onEditPrice() },
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        shape = RoundedCornerShape(8.dp)
+            .padding(vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp), 
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 1. Product Icon (Modern Square)
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = when(product.category?.lowercase()) {
+                        "charger" -> Icons.Default.BatteryChargingFull
+                        "earphone" -> Icons.Default.Headset
+                        "kabel data" -> Icons.Default.Usb
+                        "accessories" -> Icons.Default.Extension
+                        else -> Icons.Default.Inventory2
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 2. Info & Adjuster Column
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = product.name, 
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge
+                    text = product.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                
+                Spacer(modifier = Modifier.height(2.dp))
+                
+                Text(
+                    text = formatRupiah(unitPrice),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Modern +/- Adjuster
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    IconButton(
+                        onClick = { if (entry.quantity > 1) onQuantityChange(entry.quantity - 1) else onRemove() },
+                        modifier = Modifier
+                            .size(32.dp) // 👈 Diperbesar sedikit dari 14.dp agar proporsional
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp), // 👈 Ukuran icon yang pas untuk tombol 28.dp
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     Text(
-                        text = "${entry.quantity} x ${formatRupiah(unitPrice)}", 
-                        style = MaterialTheme.typography.bodyMedium, 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = entry.quantity.toString(),
+                        style = MaterialTheme.typography.titleMedium, // 👈 Dibuat sedikit lebih tegas
+                        fontWeight = FontWeight.Bold
                     )
-                    if (entry.customPrice != null) {
-                        Spacer(Modifier.width(8.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.tertiaryContainer, 
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                "Custom", 
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), 
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
+
+                    IconButton(
+                        onClick = { onQuantityChange(entry.quantity + 1) },
+                        modifier = Modifier
+                            .size(32.dp) // 👈 Samakan ukuran 28.dp
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
-            
+
+            // 3. Subtotal & Quick Actions
             Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = formatRupiah(unitPrice * entry.quantity), 
-                    fontWeight = FontWeight.ExtraBold, 
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(Modifier.height(4.dp))
                 IconButton(
-                    onClick = onRemove, 
-                    modifier = Modifier.size(32.dp)
+                    onClick = onRemove,
+                    modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        Icons.Default.RemoveCircleOutline, 
+                        Icons.Default.Close, 
                         null, 
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), 
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(18.dp)
                     )
+                }
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                Text(
+                    text = formatRupiah(unitPrice * entry.quantity),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                if (entry.customPrice != null) {
+                    Text(
+                        "Custom Price",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.clickable { onEditPrice() }
+                    )
+                } else {
+                    TextButton(
+                        onClick = onEditPrice,
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.height(20.dp)
+                    ) {
+                        Text("Edit Price", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }

@@ -10,7 +10,7 @@ data class TransactionRequest(
 )
 
 data class CartItem(
-    @SerializedName("product_id") val productId: Int,
+    @SerializedName("id") val productId: Int,
     val quantity: Int,
     val price: Long
 )
@@ -19,6 +19,7 @@ data class SalesTransactionResponse(
     val success: Boolean,
     val message: String,
     val data: SalesData? = null,
+    val invoice: String? = null,
     @SerializedName("transactions") val transactions: List<SalesData>? = null
 )
 

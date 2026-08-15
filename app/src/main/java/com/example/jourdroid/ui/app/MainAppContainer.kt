@@ -11,7 +11,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.ui.app.dashboard.DashboardScreen
 import com.example.jourdroid.ui.app.transaction.TransactionScreen
@@ -19,6 +21,8 @@ import com.example.jourdroid.ui.app.profile.ProfileScreen
 import com.example.jourdroid.ui.app.delivery.DeliveryScreen
 import com.example.jourdroid.ui.app.task.TaskScreen
 import com.example.jourdroid.ui.app.pos.PosScreen
+import com.example.jourdroid.ui.app.attendance.AttendanceScreen
+import kotlinx.coroutines.launch
 
 sealed class Screen(
     val route: String, 
@@ -69,9 +73,30 @@ fun MainAppContainer(
     user: UserData,
     onLogoutClick: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val userRole = user.role?.toString() ?: ""
     val isCourier = userRole.equals("Courier", ignoreCase = true)
     
+    // Bypass attendance for Admins
+    val isAdmin = listOf("Administrator", "Super Admin")
+        .any { it.equals(userRole, ignoreCase = true) }
+    
+    var hasCheckedInState by remember { mutableStateOf(user.hasCheckedIn == true) }
+    var isNavigatingToAttendance by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            try {
+                val apiService = ApiClient.getApiService(context)
+                val statusResponse = apiService.getUserCheckedInStatus()
+                hasCheckedInState = statusResponse.hasCheckedIn
+            } catch (e: Exception) {
+                // Keep current state on error
+            }
+        }
+    }
+
     // Define navigation items based on role
     val navigationItems = remember(userRole) {
         val list = mutableListOf<Screen>()
@@ -123,55 +148,89 @@ fun MainAppContainer(
         ) 
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp
-            ) {
-                navigationItems.forEach { screen ->
-                    val isSelected = currentScreen == screen
-                    NavigationBarItem(
-                        icon = { 
-                            Icon(
-                                if (isSelected) screen.selectedIcon else screen.unselectedIcon, 
-                                contentDescription = screen.label,
-                                modifier = Modifier.size(26.dp)
-                            ) 
-                        },
-                        label = { 
-                            Text(
-                                screen.label,
-                                style = MaterialTheme.typography.labelMedium
-                            ) 
-                        },
-                        selected = isSelected,
-                        onClick = { currentScreen = screen },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    if (isNavigatingToAttendance) {
+        AttendanceScreen(
+            user = user,
+            onSuccess = { 
+                hasCheckedInState = true
+                isNavigatingToAttendance = false
+            },
+            onLogout = {
+                isNavigatingToAttendance = false
+                onLogoutClick()
+            }
+        )
+    } else {
+        Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    navigationItems.forEach { screen ->
+                        val isSelected = currentScreen == screen
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    if (isSelected) screen.selectedIcon else screen.unselectedIcon,
+                                    contentDescription = screen.label,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            },
+                            label = {
+                                Text(
+                                    screen.label,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            },
+                            selected = isSelected,
+                            onClick = { currentScreen = screen },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            )
                         )
-                    )
+                    }
                 }
             }
-        }
-    ) { innerPadding ->
-        Crossfade(
-            targetState = currentScreen,
-            modifier = Modifier.padding(innerPadding),
-            label = "ScreenTransition"
-        ) { screen ->
-            when (screen) {
-                is Screen.Dashboard -> DashboardScreen(user = user)
-                is Screen.Task -> TaskScreen(user = user)
-                is Screen.Delivery -> DeliveryScreen(user = user)
-                is Screen.POS -> PosScreen(user = user)
-                is Screen.Transactions -> TransactionScreen(user = user)
-                is Screen.Profile -> ProfileScreen(user = user, onLogoutClick = onLogoutClick)
+        ) { innerPadding ->
+            Crossfade(
+                targetState = currentScreen,
+                modifier = Modifier.padding(innerPadding),
+                label = "ScreenTransition"
+            ) { screen ->
+                when (screen) {
+                    is Screen.Dashboard -> DashboardScreen(
+                        user = user,
+                        hasCheckedIn = hasCheckedInState,
+                        onNavigateToAttendance = {
+                            scope.launch {
+                                try {
+                                    val statusResponse = ApiClient.getApiService(context).getUserCheckedInStatus()
+                                    val hasCheckedIn = statusResponse.hasCheckedIn
+                                    hasCheckedInState = hasCheckedIn
+                                    if (!hasCheckedIn) {
+                                        isNavigatingToAttendance = true
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Sudah Absen", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    // Fallback if API fails, just show the screen
+                                    isNavigatingToAttendance = true
+                                }
+                            }
+                        }
+                    )
+                    is Screen.Task -> TaskScreen(user = user)
+                    is Screen.Delivery -> DeliveryScreen(user = user)
+                    is Screen.POS -> PosScreen(user = user)
+                    is Screen.Transactions -> TransactionScreen(user = user)
+                    is Screen.Profile -> ProfileScreen(user = user, onLogoutClick = onLogoutClick)
+                }
             }
         }
     }

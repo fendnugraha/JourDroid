@@ -1,7 +1,28 @@
-- [x] POS Login Fix & Model Synchronization
-    - [x] Update `ApiClient.kt` (Cleanup headers)
-    - [x] Update `LoginResponse.kt` (Robust models)
-    - [x] Update `LoginScreen.kt` (Input sanitization)
-- [x] Verification
-    - [x] Build project
-    - [x] Verify successful login and parsing
+- [x] Update `PrimaryCash` in `LoginResponse.kt` to handle `limit` as `JsonElement`
+- [x] Add helper property `effectiveLimit` to `PrimaryCash`
+- [x] Update usages of `limit` in `ProfileScreen.kt` to use `effectiveLimit` if necessary
+- [x] Verify fix by building the project
+- [x] Enhance Journal Filters in `TransactionScreen.kt`
+    - [x] Add `accounts` state and fetch logic
+    - [x] Implement fixed category list with counts
+    - [x] Replace Account filter `AlertDialog` with `DropdownMenu`
+    - [x] Update filter logic to match JS version
+- [x] Align `JournalTable.kt` logic with web version
+    - [x] Update `JournalTable` and `JournalItem` signatures
+    - [x] Implement `isInflow` logic and color coding
+    - [x] Implement advanced "Settle Channel" display for Mutations
+    - [x] Add `feeAmount` display
+    - [x] Update `TransactionScreen.kt` to pass required IDs
+- [x] UI Cleanup and POS Bug Fix
+    - [x] Remove FAB from `TransactionScreen.kt`
+    - [x] Fix POS 500 error by adding `warehouseId` to `TransactionRequest`
+    - [x] Verify build and functionality
+- [x] Fix POS backend mismatch, Redesign Cart UI, Remove Print
+    - [x] Rename `product_id` to `id` in `CartItem` (`SalesData.kt`)
+    - [x] Redesign `CartRow` in `PosScreen.kt` (Advanced +/- controls & Icons)
+    - [x] Remove MoreVert/Print menu from `JournalTable.kt`
+    - [x] Verify build and functionality
+- [x] Update and Optimize App Icon
+    - [x] Create Vector "J" Logo with Gradient
+    - [x] Update background to solid black
+    - [x] Align Login Screen branding

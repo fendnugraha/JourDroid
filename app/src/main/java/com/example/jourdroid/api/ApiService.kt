@@ -1,6 +1,8 @@
 package com.example.jourdroid.api
 
 import com.example.jourdroid.data.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.*
 
 interface ApiService {
@@ -13,6 +15,9 @@ interface ApiService {
     // 2. Endpoint yang butuh Bearer Token (Proteksi Sanctum)
     @GET("api/android/user-profile")
     suspend fun getUserProfile(): LoginResponse
+
+    @GET("api/checkin-status")
+    suspend fun getUserCheckedInStatus(): CheckInStatusResponse
 
     // logout
     @POST("api/logout")
@@ -31,6 +36,12 @@ interface ApiService {
     @GET("api/get-all-products")
     suspend fun getAllProducts(): ProductData
 
+    @GET("api/get-nearest-warehouse")
+    suspend fun getNearestWarehouse(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double
+    ): NearestWarehouseResponse
+
     //Deliveries
     @GET("api/deliveries")
     suspend fun getDeliveries(): DeliveryData
@@ -39,18 +50,18 @@ interface ApiService {
     @POST("api/deliveries/{id}/process")
     suspend fun processDelivery(
         @Path("id") id: String,
-        @Field("latitude") latitude: Double? = null,
-        @Field("longitude") longitude: Double? = null
+        @Field("latitude") latitude: Double?,
+        @Field("longitude") longitude: Double?
     ): retrofit2.Response<Unit>
 
     @FormUrlEncoded
     @POST("api/deliveries/{id}/complete")
     suspend fun completeDelivery(
         @Path("id") id: String,
-        @Field("latitude") latitude: Double? = null,
-        @Field("longitude") longitude: Double? = null,
-        @Field("amount") amount: Long? = null,
-        @Field("note") note: String? = null
+        @Field("latitude") latitude: Double?,
+        @Field("longitude") longitude: Double?,
+        @Field("amount") amount: Long?,
+        @Field("note") note: String?
     ): retrofit2.Response<Unit>
 
     @POST("api/deliveries/{id}/cancel")
@@ -100,13 +111,24 @@ interface ApiService {
     @PUT("api/update-delivery-status/{id}/{status}")
     suspend fun updateJournalStatus(
         @Path("id") id: Int,
-        @Path("status") status:Int
-    )
+        @Path("status") status: Int
+    ): retrofit2.Response<Unit>
 
     @FormUrlEncoded
     @POST("api/update-fcm-token")
     suspend fun updateFcmToken(
         @Field("fcm_token") token: String
+    ): retrofit2.Response<Unit>
+
+    @Multipart
+    @POST("api/create-attendance")
+    suspend fun createAttendance(
+        @Part photo: MultipartBody.Part,
+        @Part("latitude") latitude: RequestBody,
+        @Part("longitude") longitude: RequestBody,
+        @Part("warehouse_id") warehouseId: RequestBody,
+        @Part("role") role: RequestBody,
+        @Part("time_in") timeIn: RequestBody
     ): retrofit2.Response<Unit>
 
 }

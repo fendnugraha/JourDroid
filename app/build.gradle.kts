@@ -63,4 +63,7 @@ dependencies {
     
     // Play Services Location
     implementation(libs.play.services.location)
+    
+    // Coil for Image Loading
+    implementation(libs.coil.compose)
 }

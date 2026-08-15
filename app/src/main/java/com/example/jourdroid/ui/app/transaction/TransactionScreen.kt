@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.jourdroid.api.ApiClient
+import com.example.jourdroid.data.AccountItem
 import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
@@ -52,6 +53,7 @@ fun TransactionScreen(
     val scope = rememberCoroutineScope()
     
     var journals by remember { mutableStateOf<List<JournalData>>(emptyList()) }
+    var accounts by remember { mutableStateOf<List<AccountItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectedJournalForPrint by remember { mutableStateOf<JournalData?>(null) }
@@ -74,6 +76,12 @@ fun TransactionScreen(
             isLoading = true
             errorMessage = null
             val apiService = ApiClient.getApiService(context)
+
+            // Fetch accounts if not loaded
+            if (accounts.isEmpty()) {
+                val accResponse = apiService.getAllAccounts()
+                accounts = accResponse.accounts
+            }
 
             val today = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 DateUtils.getTodayJakartaFormat()
@@ -182,10 +190,25 @@ fun TransactionScreen(
         }
     }
 
-    // Distinct categories for filter chips
-    val availableCategories = remember(journals) {
-        val categories = journals.mapNotNull { it.trxType }.filter { it.isNotBlank() }.distinct().toMutableList()
-        categories
+    // Category options with counts (Matching JS structure)
+    data class CategoryOption(val value: String, val label: String, val count: Int)
+    val categoryOptions = remember(journals) {
+        val counts = journals.groupingBy { it.trxType ?: "" }.eachCount()
+        listOf(
+            CategoryOption("all", "All Type", journals.size),
+            CategoryOption("Accessories", "Accessories", counts["Accessories"] ?: 0),
+            CategoryOption("Bank Fee", "Fee/Bunga Bank", counts["Bank Fee"] ?: 0),
+            CategoryOption("Mutasi Kas", "Mutasi Kas", counts["Mutasi Kas"] ?: 0),
+            CategoryOption("Pengeluaran", "Pengeluaran", counts["Pengeluaran"] ?: 0),
+            CategoryOption("Tarik Tunai", "Tarik Tunai", counts["Tarik Tunai"] ?: 0),
+            CategoryOption("Transfer Uang", "Transfer Uang", counts["Transfer Uang"] ?: 0),
+            CategoryOption("Voucher & SP", "Voucher & SP", counts["Voucher & SP"] ?: 0)
+        )
+    }
+
+    // Filter accounts by warehouse
+    val warehouseAccounts = remember(accounts, userWarehouseId) {
+        accounts.filter { it.warehouseId == userWarehouseId }
     }
 
     val totalAmount = remember(filteredTransactions) {
@@ -226,16 +249,6 @@ fun TransactionScreen(
                         containerColor = Color.Transparent
                     )
                 )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { isModalOpen = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Tambah Jurnal")
-                }
             },
             containerColor = Color.Transparent
         ) { innerPadding ->
@@ -372,6 +385,9 @@ fun TransactionScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Account Filter Dropdown
+
+
                     // Category Filter Chips & Account Filter Button
                     Row(
                         modifier = Modifier
@@ -380,52 +396,99 @@ fun TransactionScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // All Chip
-                        FilterChip(
-                            selected = categoryFilter == "all",
-                            onClick = { categoryFilter = "all" },
-                            label = { Text("All Categories") },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-
-                        // Dynamic Category Chips
-                        availableCategories.forEach { category ->
+                        Box {
                             FilterChip(
-                                selected = categoryFilter == category,
-                                onClick = {
-                                    categoryFilter = if (categoryFilter == category) "all" else category
+                                selected = accountFilter != "all",
+                                onClick = { showAccountFilterDialog = true },
+                                label = {
+                                    val selectedAccount = warehouseAccounts.find { it.id.toString() == accountFilter }
+                                    Text(selectedAccount?.accountGroup ?: if (accountFilter == "all") "Filter Account" else "Account: #$accountFilter")
                                 },
-                                label = { Text(category) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.FilterList,
+                                        contentDescription = "Account filter",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (accountFilter != "all") {
+                                        IconButton(
+                                            onClick = { accountFilter = "all" },
+                                            modifier = Modifier.size(16.dp)
+                                        ) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Reset Account Filter")
+                                        }
+                                    }
+                                },
                                 shape = RoundedCornerShape(12.dp)
                             )
-                        }
 
-                        // Account Filter Button
-                        FilterChip(
-                            selected = accountFilter != "all",
-                            onClick = { showAccountFilterDialog = true },
-                            label = {
-                                Text(if (accountFilter == "all") "Filter Account" else "Account: #$accountFilter")
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.FilterList,
-                                    contentDescription = "Account filter",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            },
-                            trailingIcon = {
-                                if (accountFilter != "all") {
-                                    IconButton(
-                                        onClick = { accountFilter = "all" },
-                                        modifier = Modifier.size(16.dp)
-                                    ) {
-                                        Icon(Icons.Default.Clear, contentDescription = "Reset Account Filter")
+                            DropdownMenu(
+                                expanded = showAccountFilterDialog,
+                                onDismissRequest = { showAccountFilterDialog = false },
+                                modifier = Modifier.widthIn(min = 200.dp)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Semua Akun") },
+                                    onClick = {
+                                        accountFilter = "all"
+                                        showAccountFilterDialog = false
                                     }
+                                )
+                                warehouseAccounts.forEach { account ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(account.accountGroup, style = MaterialTheme.typography.bodyMedium)
+                                                Text(account.accCode, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        },
+                                        onClick = {
+                                            accountFilter = account.id.toString()
+                                            showAccountFilterDialog = false
+                                        }
+                                    )
                                 }
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                            }
+                        }
+                        // Category Chips (Fixed set with counts)
+                        categoryOptions.forEach { opt ->
+                            FilterChip(
+                                selected = categoryFilter == opt.value,
+                                onClick = { categoryFilter = opt.value },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(opt.label)
+                                        if (opt.count > 0 || opt.value == "all") {
+                                            Spacer(Modifier.width(6.dp))
+                                            Surface(
+                                                color = if (categoryFilter == opt.value)
+                                                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
+                                                else
+                                                    MaterialTheme.colorScheme.primaryContainer,
+                                                shape = CircleShape
+                                            ) {
+                                                Text(
+                                                    text = opt.count.toString(),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    color = if (categoryFilter == opt.value)
+                                                        MaterialTheme.colorScheme.onPrimary
+                                                    else
+                                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -495,7 +558,8 @@ fun TransactionScreen(
                             else -> {
                                 JournalTable(
                                     journals = filteredTransactions,
-                                    onJournalClick = { selectedJournalForPrint = it }
+                                    warehouseCashId = user.warehouse?.primaryCash?.id ?: 0,
+                                    warehouseId = user.warehouseId ?: 0
                                 )
                             }
                         }
@@ -505,52 +569,6 @@ fun TransactionScreen(
                 }
             }
         }
-    }
-
-    // Account filter dialog
-    if (showAccountFilterDialog) {
-        var tempAccountInput by remember { mutableStateOf(if (accountFilter == "all") "" else accountFilter) }
-        AlertDialog(
-            onDismissRequest = { showAccountFilterDialog = false },
-            title = { Text("Filter by Account ID") },
-            text = {
-                Column {
-                    Text(
-                        "Enter account ID to filter credit or debit accounts:",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = tempAccountInput,
-                        onValueChange = { tempAccountInput = it },
-                        label = { Text("Account ID") },
-                        placeholder = { Text("e.g. 101") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        accountFilter = if (tempAccountInput.isBlank()) "all" else tempAccountInput.trim()
-                        showAccountFilterDialog = false
-                    }
-                ) {
-                    Text("Apply Filter")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        accountFilter = "all"
-                        showAccountFilterDialog = false
-                    }
-                ) {
-                    Text("Clear Filter")
-                }
-            }
-        )
     }
 
     if (selectedJournalForPrint != null) {

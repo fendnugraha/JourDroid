@@ -3,6 +3,7 @@ package com.example.jourdroid.ui.app.profile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.AttendanceFormDialog
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import com.example.jourdroid.utils.FormatterUtils.formatShortDate
 import kotlinx.coroutines.launch
@@ -40,6 +42,12 @@ fun ProfileScreen(
     val scope = rememberCoroutineScope()
     var isLoggingOut by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    
+    val userRole = user.role?.toString() ?: ""
+    val isAdmin = listOf("Administrator", "Super Admin").any { it.equals(userRole, ignoreCase = true) }
+    
+    var isCheckedIn by remember { mutableStateOf(user.hasCheckedIn ?: false) }
+    var showAttendanceForm by remember { mutableStateOf(false) }
 
     val contact = user.contact
     val employee = user.contact?.employee
@@ -305,15 +313,27 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Attendance Status Widget
-                        val isCheckedIn = user.hasCheckedIn == true
-                        Surface(
-                            color = if (isCheckedIn) Color(0xFFF0FDF4) else Color(0xFFFFFBEB),
+                        if (!isAdmin) {
+                            Surface(
+                                color = if (isCheckedIn) Color(0xFFF0FDF4) else Color(0xFFFFFBEB),
                             shape = RoundedCornerShape(16.dp),
                             border = BorderStroke(
                                 1.dp,
                                 if (isCheckedIn) Color(0xFFBBF7D0) else Color(0xFFFDE68A)
                             ),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !isCheckedIn) {
+                                    scope.launch {
+                                        try {
+                                            val statusResponse = ApiClient.getApiService(context).getUserCheckedInStatus()
+                                            isCheckedIn = statusResponse.hasCheckedIn
+                                            if (!isCheckedIn) showAttendanceForm = true
+                                        } catch (e: Exception) {
+                                            showAttendanceForm = true
+                                        }
+                                    }
+                                }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -357,10 +377,29 @@ fun ProfileScreen(
                                         )
                                     }
                                 }
+                                    if (!isCheckedIn) {
+                                        Icon(
+                                            Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = Color(0xFFD97706),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
+
+                AttendanceFormDialog(
+                    user = user,
+                    visible = showAttendanceForm,
+                    onClose = { showAttendanceForm = false },
+                    onSuccess = {
+                        showAttendanceForm = false
+                        isCheckedIn = true
+                    }
+                )
 
                 // ─── 2. ACTIVE SANCTION / WARNING (SP) ───
                 AnimatedVisibility(visible = warning != null) {
@@ -607,9 +646,10 @@ fun ProfileScreen(
                             }
                         }
 
-                        if (primaryCash.limit != null && primaryCash.limit > 0) {
+                        val currentLimit = primaryCash.limit
+                        if (currentLimit != null && currentLimit > 0) {
                             Spacer(modifier = Modifier.height(14.dp))
-                            val usedPercentage = ((primaryCash.stBalance ?: 0L).toFloat() / primaryCash.limit.toFloat()).coerceIn(0f, 1f)
+                            val usedPercentage = ((primaryCash.stBalance ?: 0L).toFloat() / currentLimit.toFloat()).coerceIn(0f, 1f)
 
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(
@@ -617,7 +657,7 @@ fun ProfileScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        "Limit: ${formatRupiah(primaryCash.limit)}",
+                                        "Limit: ${formatRupiah(currentLimit)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

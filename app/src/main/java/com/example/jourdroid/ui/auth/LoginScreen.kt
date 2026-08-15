@@ -75,16 +75,16 @@ fun LoginScreen(onLoginSuccess: (UserData) -> Unit) {
             Surface(
                 modifier = Modifier
                     .size(100.dp)
-                    .clip(RoundedCornerShape(24.dp)),
-                color = MaterialTheme.colorScheme.primaryContainer, // Use themed container color
-                shadowElevation = 8.dp
+                    .clip(RoundedCornerShape(28.dp)),
+                color = Color.Black,
+                shadowElevation = 12.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Image(
                         painter = painterResource(id = R.drawable.app_logo),
                         contentDescription = "App Logo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        contentScale = ContentScale.Fit
                     )
                 }
             }

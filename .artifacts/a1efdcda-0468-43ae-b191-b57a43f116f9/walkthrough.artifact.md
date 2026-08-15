@@ -1,34 +1,27 @@
-# Walkthrough - Login Fix & Backend Synchronization
+# Walkthrough - App Icon Fix
 
-I have applied critical fixes to the login flow to resolve the 401 Unauthorized errors and synchronized the app's data models with your Laravel `storeAndroid` implementation.
+I have fixed the "force close" issue and correctly applied the new app icon using the provided `app_logo.png`.
 
 ## Changes Made
 
-### UI & Input Sanitization
+### 🔧 Adaptive Icon Configuration
+- **[ic_launcher.xml](file:///E:/Android Project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml)** and **[ic_launcher_round.xml](file:///E:/Android Project/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml)**:
+    - Fixed the background to point to `@color/ic_launcher_background` (Solid Black).
+    - Fixed the foreground to point to `@drawable/ic_launcher_foreground` (New Logo).
+    - This ensures a professional parallax effect and consistent shape (round/square) across different devices.
 
-#### [LoginScreen.kt](file:///E:/Android%20Project/app/src/main/java/com/example/jourdroid/ui/auth/LoginScreen.kt)
-- **Automatic Trimming**: Added `.trim()` to both the email and password before sending the request.
-- **Reason**: Mobile keyboards often insert a trailing space after an email during autocomplete, which is the #1 cause of "Email atau password salah" errors when the password is actually correct.
+### 🧹 Resource Cleanup
+- **Deleted [ic_launcher_background.xml](file:///E:/Android Project/app/src/main/res/drawable/ic_launcher_background.xml)**:
+    - Removed the conflicting green vector file that was causing resource ambiguity and potential crashes during icon rendering.
 
-### Network Layer
-
-#### [ApiClient.kt](file:///E:/Android%20Project/app/src/main/java/com/example/jourdroid/api/ApiClient.kt)
-- **Header Cleanup**: Removed the `Origin` and `Referer` headers.
-- **Reason**: These headers were causing CORS/security mismatches with your server's configuration, leading to rejected requests.
-
-### Data Layer (Backend Sync)
-
-#### [LoginResponse.kt](file:///E:/Android%20Project/app/src/main/java/com/example/jourdroid/data/LoginResponse.kt)
-- **Flexible User Model**: Made all fields in `UserData` and `Warehouse` nullable.
-- **Relation Support**: Added support for the nested data your PHP code loads (`warehouse.primary_cash`, `attendances`, `contact`).
-- **Robust Role Handling**: Changed the `role` field to `Any?` to safely handle cases where it might return a String or a complex Object.
+### 🎨 Visual Polish
+- Used an **Inset Drawable** for the foreground to ensure the logo stays perfectly centered and isn't cut off by the system's adaptive mask.
 
 ## Verification Results
 
-### Manual Verification
-- **Header Check**: Confirmed the request is now "clean" with only `Accept` and `X-Requested-With` headers.
-- **Credential Check**: Verified via `LOGIN_DEBUG` logs that the email is being sent without accidental spaces.
-- **Parsing Check**: The app can now receive the detailed User object from your Laravel controller without crashing on missing or unexpected fields.
+### Build Success
+- Successfully ran `gradle assembleDebug`. The resource conflict is resolved, and the project builds without errors.
 
+### Visual Check Recommendation
 > [!TIP]
-> If you still see 401, please check your **`LOGIN_DEBUG`** logs in Android Studio to confirm the email being sent matches exactly what's in your database.
+> After deploying the app, check your home screen. You should see the new logo perfectly centered on a solid black background. If the icon still looks old, you may need to clear the launcher's cache or restart the device.

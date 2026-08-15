@@ -105,7 +105,7 @@ fun TaskScreen(
                 val apiService = ApiClient.getApiService(context)
                 val response = when (action) {
                     "process" -> apiService.processDelivery(item.id, lat, lng)
-                    "complete" -> apiService.completeDelivery(item.id, lat, lng)
+                    "complete" -> apiService.completeDelivery(item.id, lat, lng, null, null)
                     "cancel" -> apiService.cancelDelivery(item.id)
                     else -> throw IllegalArgumentException("Unknown action")
                 }

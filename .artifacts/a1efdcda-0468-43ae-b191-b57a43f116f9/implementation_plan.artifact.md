@@ -1,37 +1,29 @@
-# Implementation Plan - POS Login Fix & Model Synchronization
+# Implementation Plan - Fix App Icon Crash and Visuals
 
-Address the persistent 401 error and sync the Android data models with the provided Laravel `storeAndroid` implementation.
-
-## User Review Required
-
-> [!IMPORTANT]
-> - **Input Sanitization**: I will force `.trim()` on email and password inputs to prevent common mobile autocomplete issues (trailing spaces).
-> - **Header Cleanup**: I will remove the `Origin` and `Referer` headers I added previously, as they might be causing security mismatches with your server's CORS configuration.
-> - **Model Flexibility**: I will make all fields in `UserData` and `LoginResponse` nullable to ensure the app doesn't crash when parsing the new, complex user object returned by your PHP code.
+The app is force closing due to a resource conflict or invalid adaptive icon configuration. There is a naming collision between `@color/ic_launcher_background` (Black) and `@drawable/ic_launcher_background` (Green Vector), and the adaptive icon is currently referencing the wrong layers.
 
 ## Proposed Changes
 
-### Network Layer
+### Adaptive Icon Configuration
 
-#### [MODIFY] [ApiClient.kt](file:///E:/Android%20Project/app/src/main/java/com/example/jourdroid/api/ApiClient.kt)
-- Remove `Origin` and `Referer` headers.
-- Keep `X-Requested-With: XMLHttpRequest` and `Accept: application/json`.
+#### [MODIFY] [ic_launcher.xml](file:///E:/Android Project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml)
+- Set `background` to `@color/ic_launcher_background` to ensure a solid black background.
+- Set `foreground` to `@drawable/ic_launcher_foreground` to use the new `app_logo.png` with proper insets.
 
-### Data Layer
+#### [MODIFY] [ic_launcher_round.xml](file:///E:/Android Project/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml)
+- Match the changes in `ic_launcher.xml` for consistency.
 
-#### [MODIFY] [LoginResponse.kt](file:///E:/Android%20Project/app/src/main/java/com/example/jourdroid/data/LoginResponse.kt)
-- Make `UserData` fields nullable.
-- Ensure `token_type` is captured.
-- Update `UserData` to support the loaded relations (`warehouse`, `attendances`).
+### Resource Cleanup
 
-### UI Layer
-
-#### [MODIFY] [LoginScreen.kt](file:///E:/Android%20Project/app/src/main/java/com/example/jourdroid/ui/auth/LoginScreen.kt)
-- Trim email and password before calling the API.
+#### [DELETE] [ic_launcher_background.xml](file:///E:/Android Project/app/src/main/res/drawable/ic_launcher_background.xml)
+- Remove this file to resolve the naming conflict with the color resource. A solid black color is preferred for the new brand identity.
 
 ## Verification Plan
 
-### Manual Verification
-- Attempt login and check Logcat.
-- Verify if trimming the input resolves the 401 "Email atau password salah".
-- Verify that a successful response is parsed without crashes even with the extra nested data (`primaryCash`, `warningActive`, etc.).
+### Build & Run
+- Run `gradle assembleDebug` to ensure no build errors.
+- Deploy to the device and verify the app no longer force closes on launch or when viewed in the task switcher.
+
+### Visual Check
+- Confirm the app icon shows the new logo on a solid black background.
+- Verify the logo is correctly centered and sized.
