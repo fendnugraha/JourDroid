@@ -22,11 +22,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.widget.Toast
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.CashBankBalanceItem
 import com.example.jourdroid.data.UserData
-import com.example.jourdroid.ui.component.AttendanceFormDialog
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import kotlinx.coroutines.launch
