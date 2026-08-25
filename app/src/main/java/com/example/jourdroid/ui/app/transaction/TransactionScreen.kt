@@ -38,6 +38,7 @@ import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.AccountItem
 import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
 import com.example.jourdroid.ui.component.ProfileAvatar
@@ -235,14 +236,8 @@ fun TransactionScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            "Activity", 
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        ) 
+                    title = {
+                        CompactPageTitle(user = user, title = "Activity")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)

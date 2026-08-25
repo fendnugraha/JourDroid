@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.DeliveryItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintDeliveryReceiptDialog
 import com.example.jourdroid.ui.component.ProfileAvatar
@@ -89,14 +90,8 @@ fun DeliveryScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            "Pengiriman", 
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        ) 
+                    title = {
+                        CompactPageTitle(user = user, title = "Pengiriman")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)

@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.jourdroid.data.UserData
@@ -30,10 +31,10 @@ fun ProfileAvatar(
     Surface(
         modifier = modifier
             .padding(start = 16.dp)
-            .size(36.dp),
+            .size(40.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         if (!photoUrl.isNullOrEmpty()) {
             val url = when {
@@ -67,6 +68,34 @@ fun ProfileAvatar(
 }
 
 @Composable
+fun CompactPageTitle(user: UserData, title: String) {
+    val name = user.contact?.name ?: user.name ?: "User"
+    val firstName = name.split(" ").firstOrNull() ?: name
+
+    Column(verticalArrangement = Arrangement.Center, modifier = Modifier.padding(start = 8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.sp
+            )
+        )
+        Text(
+            text = firstName,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                lineHeight = 16.sp,
+                letterSpacing = (-0.3).sp
+            )
+        )
+    }
+}
+
+@Composable
 fun NotificationBadge(
     unreadCount: Int,
     onClick: () -> Unit,
@@ -74,20 +103,28 @@ fun NotificationBadge(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.padding(end = 8.dp)
+        modifier = modifier.padding(end = 12.dp)
     ) {
         BadgedBox(
             badge = {
                 if (unreadCount > 0) {
-                    Badge {
-                        Text(if (unreadCount > 99) "99+" else unreadCount.toString())
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                        Text(
+                            text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                            fontSize = 8.sp
+                        )
                     }
                 }
             }
         ) {
             Icon(
                 imageVector = if (unreadCount > 0) Icons.Default.Notifications else Icons.Default.NotificationsNone,
-                contentDescription = "Notifications"
+                contentDescription = "Notifications",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
     }

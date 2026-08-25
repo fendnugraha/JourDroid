@@ -35,6 +35,7 @@ import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.SalesData
 import com.example.jourdroid.data.SalesSummaryItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintPosReceiptDialog
 import com.example.jourdroid.ui.component.ProfileAvatar
@@ -154,13 +155,7 @@ fun SalesScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            "Point Of Sales",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        )
+                        CompactPageTitle(user = user, title = "Point Of Sales")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)

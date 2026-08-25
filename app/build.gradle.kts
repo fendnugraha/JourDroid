@@ -19,18 +19,28 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Base URL untuk Development / Localhost / Staging
+            buildConfigField("String", "BASE_URL", "\"https://sandbox.three-komunika.com/\"")
+        }
         release {
+            // Base URL untuk Production
+            buildConfigField("String", "BASE_URL", "\"https://api2.three-komunika.com/\"")
             optimization {
                 enable = false
             }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    // Cukup didefinisikan satu kali di sini
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -60,10 +70,10 @@ dependencies {
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
-    
+
     // Play Services Location
     implementation(libs.play.services.location)
-    
+
     // Coil for Image Loading
     implementation(libs.coil.compose)
 }

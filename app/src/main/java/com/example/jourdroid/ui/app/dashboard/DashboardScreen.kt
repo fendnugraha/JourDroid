@@ -35,6 +35,7 @@ import coil.request.ImageRequest
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.CashBankBalanceItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.DateUtils
@@ -108,14 +109,8 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            "Dashboard", 
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        ) 
+                    title = {
+                        CompactPageTitle(user = user, title = "Dashboard")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)
@@ -160,7 +155,7 @@ fun DashboardScreen(
                 ) {
                     // Hero Summary Section (Finance App Vibe)
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -283,9 +278,9 @@ fun SummaryCard(
                     letterSpacing = 0.5.sp
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
                 text = formatRupiah(amount),
                 style = MaterialTheme.typography.titleLarge.copy(

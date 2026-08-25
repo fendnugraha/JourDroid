@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.DeliveryItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
@@ -153,14 +154,8 @@ fun TaskScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            "Tugas", 
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        ) 
+                    title = {
+                        CompactPageTitle(user = user, title = "Tugas")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)

@@ -31,6 +31,7 @@ import coil.request.ImageRequest
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.DailyDashboardData
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintReportDialog
 import com.example.jourdroid.ui.component.ProfileAvatar
@@ -64,14 +65,8 @@ fun ReportScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            "Summary", 
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        ) 
+                    title = {
+                        CompactPageTitle(user = user, title = "Summary")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)

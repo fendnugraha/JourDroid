@@ -34,6 +34,7 @@ import coil.request.ImageRequest
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.ui.component.AttendanceFormDialog
+import com.example.jourdroid.ui.component.CompactPageTitle
 import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.DateUtils
@@ -234,13 +235,7 @@ fun ProfileScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            "Profile",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                        )
+                        CompactPageTitle(user = user, title = "Profile")
                     },
                     navigationIcon = {
                         ProfileAvatar(user = user)
@@ -306,15 +301,9 @@ fun ProfileScreen(
                                                 strokeWidth = 2.dp
                                             )
                                         } else if (!userPhotoUrl.isNullOrEmpty()) {
-                                            val url = when {
-                                                userPhotoUrl.startsWith("http") -> userPhotoUrl
-                                                userPhotoUrl.startsWith("/") -> "https://sandbox.three-komunika.com$userPhotoUrl"
-                                                userPhotoUrl.startsWith("storage/") -> "https://sandbox.three-komunika.com/$userPhotoUrl"
-                                                else -> "https://sandbox.three-komunika.com/storage/$userPhotoUrl"
-                                            }
                                             AsyncImage(
                                                 model = ImageRequest.Builder(LocalContext.current)
-                                                    .data(url)
+                                                    .data(userPhotoUrl)
                                                     .crossfade(true)
                                                     .allowHardware(false)
                                                     .build(),

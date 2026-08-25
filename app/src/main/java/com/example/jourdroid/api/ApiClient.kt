@@ -7,10 +7,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import com.example.jourdroid.BuildConfig
 import com.example.jourdroid.utils.AuthManager
 
 object ApiClient {
-    private const val BASE_URL = "https://sandbox.three-komunika.com/"
+    private const val BASE_URL = BuildConfig.BASE_URL
 
     private var cachedService: ApiService? = null
 
