@@ -1,8 +1,9 @@
 package com.example.jourdroid.ui.app.dashboard
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,7 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +40,8 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     user: UserData,
     hasCheckedIn: Boolean,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {},
     onNavigateToAttendance: () -> Unit
 ) {
     val context = LocalContext.current
@@ -47,17 +55,15 @@ fun DashboardScreen(
     val userRole = user.role?.toString() ?: ""
     val isAdmin = listOf("Administrator", "Super Admin").any { it.equals(userRole, ignoreCase = true) }
 
+    val pagerState = rememberPagerState(pageCount = { 2 })
+
     val refreshData = suspend {
         try {
             isLoading = true
             errorMessage = null
             val apiService = ApiClient.getApiService(context)
 
-            val today = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                DateUtils.getTodayJakartaFormat()
-            } else {
-                "2026-07-09"
-            }
+            val today = DateUtils.getTodayJakartaFormat()
 
             val response = apiService.getCashBankBalance(
                 warehouse = userWarehouseId,
@@ -102,7 +108,24 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                         ) 
                     },
-                    actions = {},
+                    actions = {
+                        IconButton(onClick = onNavigateToNotifications) {
+                            BadgedBox(
+                                badge = {
+                                    if (unreadNotificationCount > 0) {
+                                        Badge {
+                                            Text(if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (unreadNotificationCount > 0) Icons.Default.Notifications else Icons.Default.NotificationsNone,
+                                    contentDescription = "Notifications"
+                                )
+                            }
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
                     )
@@ -122,73 +145,94 @@ fun DashboardScreen(
             },
             containerColor = Color.Transparent
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
-                PullToRefreshBox(
-                    isRefreshing = isLoading,
-                    onRefresh = { scope.launch { refreshData() } },
-                    modifier = Modifier.fillMaxSize()
+            PullToRefreshBox(
+                isRefreshing = isLoading,
+                onRefresh = { scope.launch { refreshData() } },
+                modifier = Modifier.padding(innerPadding).fillMaxSize()
+            ) {
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(scrollState),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val scrollState = rememberScrollState()
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp)
-                            .verticalScroll(scrollState),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    // Hero Summary Section (Finance App Vibe)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        when {
-                            isLoading && balanceData == null -> {
-                                CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+                        SummaryCard(
+                            title = "Cash",
+                            amount = balanceData?.sumtotalCash ?: 0L,
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Default.Wallet
+                        )
+                        SummaryCard(
+                            title = "Bank",
+                            amount = balanceData?.sumtotalBank ?: 0L,
+                            modifier = Modifier.weight(1f),
+                            color = Color(0xFF0EA5E9),
+                            icon = Icons.Default.AccountBalance
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Tab Switching Section
+                    TabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = { tabPositions ->
+                            if (pagerState.currentPage < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
-                            errorMessage != null -> {
-                                Column(
-                                    modifier = Modifier.padding(32.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
-                                    Button(onClick = { scope.launch { refreshData() } }, modifier = Modifier.padding(top = 8.dp)) {
-                                        Text("Coba Lagi")
+                        }
+                    ) {
+                        Tab(
+                            selected = pagerState.currentPage == 0,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                            text = { Text("Balance", fontWeight = FontWeight.Bold) },
+                            icon = { Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(18.dp)) }
+                        )
+                        Tab(
+                            selected = pagerState.currentPage == 1,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                            text = { Text("Report", fontWeight = FontWeight.Bold) },
+                            icon = { Icon(Icons.Default.PieChart, null, modifier = Modifier.size(18.dp)) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Content Pager - Using a Box to fix height issues in vertical scroll
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 500.dp)) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.Top
+                        ) { page ->
+                            when (page) {
+                                0 -> {
+                                    if (balanceData != null) {
+                                        CashBankBalance(accounts = balanceData!!.chartOfAccounts)
+                                    } else if (!isLoading) {
+                                        Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                            Text("No balance data", style = MaterialTheme.typography.bodyMedium)
+                                        }
                                     }
                                 }
-                            }
-                            balanceData == null || balanceData?.chartOfAccounts?.isEmpty() == true -> {
-                                Text(
-                                    text = "Tidak ada data saldo",
-                                    modifier = Modifier.padding(32.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            else -> {
-                                // Summary Cards
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    SummaryCard(
-                                        title = "Cash",
-                                        amount = balanceData?.sumtotalCash ?: 0L,
-                                        modifier = Modifier.weight(1f),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        icon = Icons.Default.AccountBalanceWallet
-                                    )
-                                    SummaryCard(
-                                        title = "Bank",
-                                        amount = balanceData?.sumtotalBank ?: 0L,
-                                        modifier = Modifier.weight(1f),
-                                        color = Color(0xFF0EA5E9),
-                                        icon = Icons.Default.AccountBalance
-                                    )
+                                1 -> {
+                                    ReportContent(user = user)
                                 }
-
-                                Text(
-                                    text = "Cash & Bank Details",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                    modifier = Modifier.align(Alignment.Start).padding(bottom = 12.dp)
-                                )
-                                
-                                CashBankBalance(
-                                    accounts = balanceData!!.chartOfAccounts
-                                )
                             }
                         }
                     }

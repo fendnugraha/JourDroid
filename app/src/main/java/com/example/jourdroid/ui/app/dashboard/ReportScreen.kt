@@ -1,8 +1,6 @@
 package com.example.jourdroid.ui.app.dashboard
 
-import android.os.Build
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,7 +12,6 @@ import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,59 +30,14 @@ import com.example.jourdroid.ui.component.PrintReportDialog
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
     user: UserData
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
-    var reportData by remember { mutableStateOf<DailyDashboardData?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showPrintDialog by remember { mutableStateOf(false) }
-    val openingCash = 9000000
-
-    val userWarehouseId = user.warehouseId ?: 0
-
-    val fetchReport = suspend {
-        try {
-            isLoading = true
-            errorMessage = null
-            val apiService = ApiClient.getApiService(context)
-
-            val today = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                DateUtils.getTodayJakartaFormat()
-            } else {
-                "2026-07-20"
-            }
-
-            val response = apiService.getDailyDashboard(
-                warehouse = userWarehouseId,
-                startDate = today,
-                endDate = today
-            )
-            
-            Log.d("ReportScreen", "Response: $response")
-
-            if (response.success == true) {
-                reportData = response.data
-            } else {
-                errorMessage = response.message
-            }
-        } catch (e: Exception) {
-            errorMessage = "Gagal memuat laporan: ${e.localizedMessage}"
-        } finally {
-            isLoading = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        fetchReport()
-    }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
@@ -105,17 +57,12 @@ fun ReportScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Daily Overview", 
+                            "Ringkasan Harian", 
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 0.5.sp
                             )
                         ) 
-                    },
-                    actions = {
-                        IconButton(onClick = { scope.launch { fetchReport() } }, enabled = !isLoading) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
@@ -124,104 +71,137 @@ fun ReportScreen(
             },
             containerColor = Color.Transparent
         ) { innerPadding ->
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(strokeWidth = 3.dp)
+            ReportContent(
+                user = user,
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState())
+            )
+        }
+    }
+}
+
+@Composable
+fun ReportContent(
+    user: UserData,
+    modifier: Modifier = Modifier,
+    onDataLoaded: (DailyDashboardData?) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    var reportData by remember { mutableStateOf<DailyDashboardData?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showPrintDialog by remember { mutableStateOf(false) }
+    
+    val userWarehouseId = user.warehouseId ?: 0
+    val openingCash = 9000000
+
+    val fetchReport = suspend {
+        try {
+            isLoading = true
+            errorMessage = null
+            val apiService = ApiClient.getApiService(context)
+
+            val today = DateUtils.getTodayJakartaFormat()
+
+            val response = apiService.getDailyDashboard(
+                warehouse = userWarehouseId,
+                startDate = today,
+                endDate = today
+            )
+            
+            Log.d("ReportScreen", "Response: $response")
+
+            if (response.success == true) {
+                reportData = response.data
+                onDataLoaded(response.data)
+            } else {
+                errorMessage = response.message
+            }
+        } catch (e: Exception) {
+            errorMessage = "Gagal memuat laporan: ${e.localizedMessage}"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fetchReport()
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(strokeWidth = 3.dp)
+            }
+        } else if (errorMessage != null) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                TextButton(onClick = { scope.launch { fetchReport() } }) {
+                    Text("Coba Lagi")
                 }
-            } else if (errorMessage != null) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+            }
+        } else if (reportData != null) {
+            val data = reportData!!
+            
+            // Business Logic Formulas
+            val totalRevenue = data.totalFee + data.totalCash + 
+                              (data.totalCashDeposit?.total ?: 0) + 
+                              (data.totalAccessories?.total ?: 0) + 
+                              (data.totalVoucher?.total ?: 0) - 
+                              data.totalExpense
+            
+            val totalDisetor = totalRevenue - openingCash
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Detailed Breakdown Card
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.error)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
-                    TextButton(onClick = { scope.launch { fetchReport() } }) {
-                        Text("Retry")
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        SectionHeader("Sumber Pendapatan", Icons.Default.TrendingUp, Color(0xFF4CAF50))
+                        
+                        ReportRow("Uang Tunai", data.totalCash.toLong())
+                        ReportRow("Voucher", (data.totalVoucher?.total ?: 0).toLong())
+                        ReportRow("Accessories", (data.totalAccessories?.total ?: 0).toLong())
+                        ReportRow("Deposit", (data.totalCashDeposit?.total ?: 0).toLong())
+                        ReportRow("Koreksi", data.totalCorrection.toLong())
+                        ReportRow("Fee Jasa", data.totalFee.toLong())
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+                        
+                        ReportRow("Modal Awal", openingCash.toLong(), color = Color.Gray)
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+                        
+                        SectionHeader("Potongan", Icons.Default.TrendingDown, Color(0xFFF44336))
+                        ReportRow("Biaya Operasional", data.totalExpense.toLong(), color = Color.Red)
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 1.dp)
+                        
+                        ReportRow(
+                            label = "Pendapatan Bersih", 
+                            value = totalRevenue.toLong(), 
+                            color = if (totalRevenue >= 0) Color(0xFF00897B) else Color.Red,
+                            isBold = true,
+                            large = true
+                        )
                     }
                 }
-            } else if (reportData != null) {
-                val data = reportData!!
                 
-                // Formulas
-                val totalRevenue = data.totalFee + data.totalCash + 
-                                  (data.totalCashDeposit?.total ?: 0) + 
-                                  (data.totalAccessories?.total ?: 0) + 
-                                  (data.totalVoucher?.total ?: 0) + 
-                                  data.totalExpense
-                
-                val totalDisetor = if (data.totalCash > openingCash) {
-                    totalRevenue - openingCash
-                } else {
-                    totalRevenue
-                }
-
-                val showWarning = totalRevenue < openingCash
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 20.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    // Quick Summary Header
-                    HeaderSummaryCard(totalDisetor.toLong())
-
-                    if (showWarning) {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Warning: Total Pendapatan is below Opening Cash!",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    // Detailed Breakdown Card
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            SectionHeader("Income Sources", Icons.Default.TrendingUp, Color(0xFF4CAF50))
-                            
-                            ReportRow("Uang Tunai", data.totalCash.toLong())
-                            ReportRow("Voucher", (data.totalVoucher?.total ?: 0).toLong())
-                            ReportRow("Accessories", (data.totalAccessories?.total ?: 0).toLong())
-                            ReportRow("Deposit", (data.totalCashDeposit?.total ?: 0).toLong())
-                            ReportRow("Koreksi", data.totalCorrection.toLong())
-                            ReportRow("Fee Jasa", data.totalFee.toLong())
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
-                            
-                            SectionHeader("Deductions", Icons.Default.TrendingDown, Color(0xFFF44336))
-                            ReportRow("Biaya Operasional", data.totalExpense.toLong(), color = Color.Red)
-                            
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 1.dp)
-                            
-                            ReportRow(
-                                label = "Total Pendapatan", 
-                                value = totalRevenue.toLong(), 
-                                color = if (totalRevenue >= 0) Color(0xFF00897B) else Color.Red,
-                                isBold = true,
-                                large = true
-                            )
-                        }
-                    }
-                    
                     // Final Settlement Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -250,7 +230,7 @@ fun ReportScreen(
                             
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Based on total cash vs opening balance",
+                                text = "Berdasarkan total pendapatan dikurangi modal awal",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
                                 textAlign = TextAlign.End,
@@ -259,19 +239,18 @@ fun ReportScreen(
                         }
                     }
 
-                    Button(
-                        onClick = { showPrintDialog = true },
-                        modifier = Modifier.fillMaxWidth().height(60.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                    ) {
-                        Icon(Icons.Default.Print, contentDescription = null)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("PRINT DAILY REPORT", fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                    }
-                    
-                    Spacer(modifier = Modifier.height(40.dp))
+                Button(
+                    onClick = { showPrintDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Print, contentDescription = null)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("CETAK LAPORAN HARIAN", fontWeight = FontWeight.Bold)
                 }
+                
+                Spacer(modifier = Modifier.height(88.dp)) // Avoid overlap with bottom nav or FAB
             }
         }
     }
@@ -282,35 +261,6 @@ fun ReportScreen(
             warehouseName = user.warehouse?.name ?: "Gudang Utama",
             onDismiss = { showPrintDialog = false }
         )
-    }
-}
-
-@Composable
-fun HeaderSummaryCard(amount: Long) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(24.dp),
-        shadowElevation = 8.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "Final Balance", 
-                style = MaterialTheme.typography.labelMedium, 
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-            )
-            Text(
-                text = formatRupiah(amount),
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    letterSpacing = (-1).sp
-                )
-            )
-        }
     }
 }
 

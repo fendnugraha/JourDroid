@@ -14,6 +14,19 @@ interface ApiService {
     ): retrofit2.Response<LoginResponse>
 
     // 2. Endpoint yang butuh Bearer Token (Proteksi Sanctum)
+    @GET("api/notifications")
+    suspend fun getNotifications(
+        @Query("page") page: Int
+    ): NotificationResponse
+
+    @POST("api/notifications/mark-all-read")
+    suspend fun markAllNotificationsRead(): retrofit2.Response<Unit>
+
+    @POST("api/notifications/{id}/mark-read")
+    suspend fun markNotificationRead(
+        @Path("id") id: String
+    ): retrofit2.Response<Unit>
+
     @GET("api/android/user-profile")
     suspend fun getUserProfile(): LoginResponse
 

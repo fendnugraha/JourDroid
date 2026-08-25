@@ -23,6 +23,7 @@ import com.example.jourdroid.ui.app.task.TaskScreen
 import com.example.jourdroid.ui.app.pos.SalesScreen
 import com.example.jourdroid.ui.app.attendance.AttendanceScreen
 import com.example.jourdroid.ui.app.attendance.AttendanceSuccessScreen
+import com.example.jourdroid.ui.app.notification.NotificationScreen
 import com.example.jourdroid.data.AttendanceData
 import kotlinx.coroutines.launch
 
@@ -86,6 +87,8 @@ fun MainAppContainer(
     
     var hasCheckedInState by remember { mutableStateOf(currentUser.hasCheckedIn == true) }
     var isNavigatingToAttendance by remember { mutableStateOf(false) }
+    var isNavigatingToNotifications by remember { mutableStateOf(false) }
+    var unreadNotificationCount by remember { mutableIntStateOf(0) }
     var attendanceSuccessData by remember { mutableStateOf<AttendanceData?>(null) }
     val context = LocalContext.current
 
@@ -95,6 +98,10 @@ fun MainAppContainer(
                 val apiService = ApiClient.getApiService(context)
                 val statusResponse = apiService.getUserCheckedInStatus()
                 hasCheckedInState = statusResponse.hasCheckedIn
+                
+                // Fetch unread notifications count
+                val notifResponse = apiService.getNotifications(page = 1)
+                unreadNotificationCount = notifResponse.unreadCount
             } catch (e: Exception) {
                 // Keep current state on error
             }
@@ -170,6 +177,19 @@ fun MainAppContainer(
                 onLogoutClick()
             }
         )
+    } else if (isNavigatingToNotifications) {
+        NotificationScreen(
+            onBack = { 
+                isNavigatingToNotifications = false 
+                // Refresh unread count when coming back
+                scope.launch {
+                    try {
+                        val notifResponse = ApiClient.getApiService(context).getNotifications(page = 1)
+                        unreadNotificationCount = notifResponse.unreadCount
+                    } catch (_: Exception) {}
+                }
+            }
+        )
     } else {
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -217,6 +237,8 @@ fun MainAppContainer(
                     is Screen.Dashboard -> DashboardScreen(
                         user = currentUser,
                         hasCheckedIn = hasCheckedInState,
+                        unreadNotificationCount = unreadNotificationCount,
+                        onNavigateToNotifications = { isNavigatingToNotifications = true },
                         onNavigateToAttendance = {
                             scope.launch {
                                 try {
