@@ -257,12 +257,30 @@ fun MainAppContainer(
                             }
                         }
                     )
-                    is Screen.Task -> TaskScreen(user = currentUser)
-                    is Screen.Delivery -> DeliveryScreen(user = currentUser)
-                    is Screen.POS -> SalesScreen(user = currentUser)
-                    is Screen.Transactions -> TransactionScreen(user = currentUser)
+                    is Screen.Task -> TaskScreen(
+                        user = currentUser,
+                        unreadNotificationCount = unreadNotificationCount,
+                        onNavigateToNotifications = { isNavigatingToNotifications = true }
+                    )
+                    is Screen.Delivery -> DeliveryScreen(
+                        user = currentUser,
+                        unreadNotificationCount = unreadNotificationCount,
+                        onNavigateToNotifications = { isNavigatingToNotifications = true }
+                    )
+                    is Screen.POS -> SalesScreen(
+                        user = currentUser,
+                        unreadNotificationCount = unreadNotificationCount,
+                        onNavigateToNotifications = { isNavigatingToNotifications = true }
+                    )
+                    is Screen.Transactions -> TransactionScreen(
+                        user = currentUser,
+                        unreadNotificationCount = unreadNotificationCount,
+                        onNavigateToNotifications = { isNavigatingToNotifications = true }
+                    )
                     is Screen.Profile -> ProfileScreen(
-                        user = currentUser, 
+                        user = currentUser,
+                        unreadNotificationCount = unreadNotificationCount,
+                        onNavigateToNotifications = { isNavigatingToNotifications = true },
                         onLogoutClick = onLogoutClick,
                         onUserUpdate = { newUser -> 
                             currentUser = newUser

@@ -87,10 +87,17 @@ data class ContactData(
     val email: String? = null,
     val phone: String? = null,
     @SerializedName("telegram_chat_id") val telegramChatId: String? = null,
+    @SerializedName("contact_photo_url") val contactPhotoUrl: String? = null,
     val address: String? = null,
     val photo: String? = null,
     @SerializedName("user_id") val userId: Int? = null,
-    val employee: EmployeeData? = null
+    val employee: EmployeeData? = null,
+    @SerializedName("employee_receivables_sum") val employeeReceivablesSum: ReceivableSum? = null,
+    @SerializedName("installment_receivables_sum") val installmentReceivablesSum: ReceivableSum? = null
+)
+
+data class ReceivableSum(
+    val total: Double? = null
 )
 
 data class EmployeeData(
@@ -117,4 +124,10 @@ data class WarningData(
     @SerializedName("letter_number") val letterNumber: String? = null,
     @SerializedName("expired_date") val expiredDate: String? = null,
     val reason: String? = null
+)
+
+data class ContactUpdateResponse(
+    val status: String,
+    val message: String,
+    val data: ContactData
 )

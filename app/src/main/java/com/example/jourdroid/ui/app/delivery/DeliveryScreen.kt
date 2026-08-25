@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -18,11 +19,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.DeliveryItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintDeliveryReceiptDialog
+import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import com.example.jourdroid.utils.FormatterUtils.formatShortDate
 import kotlinx.coroutines.launch
@@ -30,7 +35,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeliveryScreen(
-    user: UserData
+    user: UserData,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -68,7 +75,7 @@ fun DeliveryScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
             MaterialTheme.colorScheme.surface
         )
     )
@@ -84,9 +91,21 @@ fun DeliveryScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Data Pengiriman", 
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                            "Pengiriman", 
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            )
                         ) 
+                    },
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
+                    },
+                    actions = {
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
@@ -103,30 +122,36 @@ fun DeliveryScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 20.dp)
                 ) {
                     if (isLoading && deliveries.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(strokeWidth = 3.dp)
                         }
                     } else if (errorMessage != null && deliveries.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
-                                Button(onClick = { scope.launch { refreshDeliveries() } }) {
+                                Icon(Icons.Default.Info, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.error)
+                                Spacer(Modifier.height(16.dp))
+                                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                                TextButton(onClick = { scope.launch { refreshDeliveries() } }) {
                                     Text("Retry")
                                 }
                             }
                         }
                     } else if (deliveries.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "Belum ada riwayat pengiriman.", style = MaterialTheme.typography.bodyMedium)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.LocalShipping, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                                Spacer(Modifier.height(16.dp))
+                                Text(text = "Belum ada riwayat pengiriman.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            }
                         }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(deliveries) { item ->
                                 DeliveryDataCard(
@@ -156,10 +181,11 @@ fun DeliveryDataCard(
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -168,31 +194,31 @@ fun DeliveryDataCard(
                 Column {
                     Text(
                         text = item.invoice ?: "INV-####",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
                     )
                     Text(
                         text = formatShortDate(item.createdAt),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
                 Surface(
                     color = when(item.status.lowercase()) {
-                        "delivered" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                        "pending" -> Color(0xFFFFA000).copy(alpha = 0.1f)
+                        "delivered" -> Color(0xFF10B981).copy(alpha = 0.1f)
+                        "pending" -> Color(0xFFF59E0B).copy(alpha = 0.1f)
                         else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                     },
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = item.status.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Black,
                             color = when(item.status.lowercase()) {
-                                "delivered" -> Color(0xFF4CAF50)
-                                "pending" -> Color(0xFFFFA000)
+                                "delivered" -> Color(0xFF10B981)
+                                "pending" -> Color(0xFFF59E0B)
                                 else -> MaterialTheme.colorScheme.primary
                             }
                         )
@@ -200,23 +226,30 @@ fun DeliveryDataCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Dari", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("DARI", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                     Text(item.sourceAccount?.warehouse?.name ?: "-", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium))
                 }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.padding(horizontal = 8.dp).size(16.dp))
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                }
                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text("Ke", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(item.destinationAccount?.warehouse?.name ?: "-", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                    Text("KE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    Text(item.destinationAccount?.warehouse?.name ?: "-", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -224,21 +257,22 @@ fun DeliveryDataCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Total", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("TOTAL NILAI", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                     Text(
                         text = formatRupiah(item.amount),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
                     )
                 }
                 
-                OutlinedButton(
+                Button(
                     onClick = onPrintClick,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Print Struk")
+                    Text("PRINT", fontWeight = FontWeight.Bold)
                 }
             }
         }

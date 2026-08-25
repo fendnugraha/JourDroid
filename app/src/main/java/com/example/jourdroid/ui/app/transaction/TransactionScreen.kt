@@ -38,7 +38,9 @@ import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.AccountItem
 import com.example.jourdroid.data.JournalData
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintJournalReceiptDialog
+import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.ui.component.SlideUpModal
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatNumberWithDots
@@ -47,7 +49,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionScreen(
-    user: UserData
+    user: UserData,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -217,7 +221,7 @@ fun TransactionScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
             MaterialTheme.colorScheme.surface
         )
     )
@@ -232,19 +236,23 @@ fun TransactionScreen(
             topBar = {
                 TopAppBar(
                     title = { 
-                        Column {
-                            Text(
-                                "Finance Activity", 
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        Text(
+                            "Activity", 
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
                             )
-                            Text(
-                                text = userWarehouseName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        ) 
                     },
-                    actions = {},
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
+                    },
+                    actions = {
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
                     )
@@ -262,20 +270,20 @@ fun TransactionScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 20.dp)
                         .verticalScroll(scrollState),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // ─── FINANCE APP VIBE SUMMARY CARD ───
-                    Card(
+                    ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(
                             modifier = Modifier.padding(20.dp)
@@ -290,7 +298,7 @@ fun TransactionScreen(
                                         modifier = Modifier
                                             .size(36.dp)
                                             .background(
-                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                                 CircleShape
                                             ),
                                         contentAlignment = Alignment.Center
@@ -298,29 +306,30 @@ fun TransactionScreen(
                                         Icon(
                                             Icons.Default.SwapHoriz,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
-                                        text = "Total Transactions",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        text = "TOTAL TRANSACTIONS",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Black,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        letterSpacing = 0.5.sp
                                     )
                                 }
 
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                                 ) {
                                     Text(
                                         text = "${filteredTransactions.size} items",
-                                        style = MaterialTheme.typography.labelMedium,
+                                        style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -330,10 +339,10 @@ fun TransactionScreen(
                             Text(
                                 text = "Rp " + formatNumberWithDots(totalAmount),
                                 style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Black,
                                     letterSpacing = (-0.5).sp
                                 ),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -342,14 +351,14 @@ fun TransactionScreen(
                                 Icon(
                                     Icons.Default.TrendingUp,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = Color(0xFF10B981),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Filtered journal volume today",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }

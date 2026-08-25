@@ -1,32 +1,39 @@
 package com.example.jourdroid.ui.app.dashboard
 
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Print
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.DailyDashboardData
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintReportDialog
+import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import kotlinx.coroutines.launch
@@ -34,7 +41,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
-    user: UserData
+    user: UserData,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -57,12 +66,21 @@ fun ReportScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Ringkasan Harian", 
+                            "Summary", 
                             style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.5.sp
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
                             )
                         ) 
+                    },
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
+                    },
+                    actions = {
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
@@ -172,7 +190,7 @@ fun ReportContent(
                     colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        SectionHeader("Sumber Pendapatan", Icons.Default.TrendingUp, Color(0xFF4CAF50))
+                        SectionHeader("Sumber Pendapatan", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF4CAF50))
                         
                         ReportRow("Uang Tunai", data.totalCash.toLong())
                         ReportRow("Voucher", (data.totalVoucher?.total ?: 0).toLong())
@@ -187,7 +205,7 @@ fun ReportContent(
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
                         
-                        SectionHeader("Potongan", Icons.Default.TrendingDown, Color(0xFFF44336))
+                        SectionHeader("Potongan", Icons.AutoMirrored.Filled.TrendingDown, Color(0xFFF44336))
                         ReportRow("Biaya Operasional", data.totalExpense.toLong(), color = Color.Red)
                         
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 1.dp)

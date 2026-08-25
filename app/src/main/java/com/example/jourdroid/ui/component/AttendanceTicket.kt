@@ -78,7 +78,7 @@ fun AttendanceTicket(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "ATTENDANCE SUCCESS",
+                    text = "ABSENSI BERHASIL",
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
@@ -103,7 +103,7 @@ fun AttendanceTicket(
                         .allowHardware(false) // 🟢 Disable hardware bitmaps for safe sharing capture
                         .crossfade(true)
                         .build(),
-                    contentDescription = "Attendance Photo",
+                    contentDescription = "Foto Absensi",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
@@ -118,17 +118,17 @@ fun AttendanceTicket(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            TicketInfoItem("USER NAME", userName)
-            TicketInfoItem("WAREHOUSE", warehouseName)
-            TicketInfoItem("CHECK-IN TIME", displayTime)
-            TicketInfoItem("DATE", displayDate)
+            TicketInfoItem("NAMA PENGGUNA", userName)
+            TicketInfoItem("GUDANG", warehouseName)
+            TicketInfoItem("JAM MASUK", displayTime)
+            TicketInfoItem("TANGGAL", displayDate)
             
             val statusStr = when (val s = data.approvalStatus) {
-                "1", 1, 1.0 -> "Approved"
-                "Late", "late" -> "Late"
-                else -> s?.toString() ?: "Pending"
+                "1", 1, 1.0 -> "Disetujui"
+                "Late", "late" -> "Terlambat"
+                else -> s?.toString() ?: "Menunggu"
             }
-            TicketInfoItem("STATUS", statusStr, valueColor = if (statusStr == "Approved") Color(0xFF4CAF50) else primaryColor)
+            TicketInfoItem("STATUS", statusStr, valueColor = if (statusStr == "Disetujui") Color(0xFF4CAF50) else primaryColor)
 
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -151,7 +151,7 @@ fun AttendanceTicket(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "GPS Verified Location",
+                    text = "Lokasi Terverifikasi GPS",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

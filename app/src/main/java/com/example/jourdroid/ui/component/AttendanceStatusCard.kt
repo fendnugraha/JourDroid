@@ -75,7 +75,7 @@ fun AttendanceStatusCard(
                             )
                         )
                         Text(
-                            text = if (hasCheckedIn) "Ready to work!" else "Ditunggu absennya!",
+                            text = if (hasCheckedIn) "Siap bekerja!" else "Ditunggu absennya!",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = Color.White.copy(alpha = 0.8f),
                                 fontSize = 10.sp
@@ -91,7 +91,7 @@ fun AttendanceStatusCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
+                            contentDescription = "Bagikan",
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )

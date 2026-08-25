@@ -35,7 +35,9 @@ import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.SalesData
 import com.example.jourdroid.data.SalesSummaryItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.NotificationBadge
 import com.example.jourdroid.ui.component.PrintPosReceiptDialog
+import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import com.example.jourdroid.utils.FormatterUtils.formatShortDate
@@ -46,7 +48,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalesScreen(
-    user: UserData
+    user: UserData,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -141,7 +145,7 @@ fun SalesScreen(
     } else {
         val gradient = Brush.verticalGradient(
             colors = listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                 MaterialTheme.colorScheme.surface
             )
         )
@@ -150,14 +154,16 @@ fun SalesScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text("Sales Activity", fontWeight = FontWeight.Bold)
-                            Text(
-                                text = userWarehouseName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Text(
+                            "Point Of Sales",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
                             )
-                        }
+                        )
+                    },
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
                     },
                     actions = {
                         if (selectedTab == 1 && summaryItems.isNotEmpty()) {
@@ -184,6 +190,11 @@ fun SalesScreen(
                                 Icon(Icons.Default.Share, contentDescription = "Share Inventory Report")
                             }
                         }
+                        
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )

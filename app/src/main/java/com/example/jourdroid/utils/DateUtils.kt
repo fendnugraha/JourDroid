@@ -33,4 +33,30 @@ object DateUtils {
             sdf.format(Calendar.getInstance().time)
         }
     }
+
+    fun calculateWorkDuration(hireDate: String?): String {
+        if (hireDate.isNullOrEmpty()) return "-"
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val date = sdf.parse(hireDate.substring(0, 10)) ?: return "-"
+            val now = Calendar.getInstance()
+            val hire = Calendar.getInstance().apply { time = date }
+
+            var years = now.get(Calendar.YEAR) - hire.get(Calendar.YEAR)
+            var months = now.get(Calendar.MONTH) - hire.get(Calendar.MONTH)
+
+            if (months < 0) {
+                years--
+                months += 12
+            }
+
+            when {
+                years > 0 -> "$years Thn, $months Bln"
+                months > 0 -> "$months Bln"
+                else -> "Baru Bergabung"
+            }
+        } catch (e: Exception) {
+            "-"
+        }
+    }
 }

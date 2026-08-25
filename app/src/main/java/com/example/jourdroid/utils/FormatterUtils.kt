@@ -23,6 +23,16 @@ object FormatterUtils {
         return formatRupiah(amount?.toLong())
     }
 
+    fun formatRupiah(amount: Double?): String {
+        if (amount == null) return "Rp 0"
+        return try {
+            val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+            format.format(amount).replace(",00", "").replace("Rp", "Rp ")
+        } catch (e: Exception) {
+            "Rp 0"
+        }
+    }
+
     /**
      * Mengubah Angka biasa menjadi ber-titik ribuan (Tanpa embel-embel Rp)
      * Contoh: 15000 -> "15.000"

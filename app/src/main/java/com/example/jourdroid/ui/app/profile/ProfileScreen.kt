@@ -1,5 +1,9 @@
 package com.example.jourdroid.ui.app.profile
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,26 +20,39 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.UserData
 import com.example.jourdroid.ui.component.AttendanceFormDialog
+import com.example.jourdroid.ui.component.NotificationBadge
+import com.example.jourdroid.ui.component.ProfileAvatar
+import com.example.jourdroid.utils.DateUtils
+import com.example.jourdroid.utils.FormatterUtils.formatLongDate
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import com.example.jourdroid.utils.FormatterUtils.formatShortDate
+import com.example.jourdroid.utils.ImageUtils
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     user: UserData,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {},
     onLogoutClick: () -> Unit,
     onUserUpdate: (UserData) -> Unit = {}
 ) {
@@ -49,14 +66,76 @@ fun ProfileScreen(
     
     var isCheckedIn by remember { mutableStateOf(user.hasCheckedIn ?: false) }
     var showAttendanceForm by remember { mutableStateOf(false) }
+    var isUploadingPhoto by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                try {
+                    isUploadingPhoto = true
+                    val compressedFile = ImageUtils.compressImage(context, it, 300)
+                    val requestFile = compressedFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                    val photoPart = MultipartBody.Part.createFormData("photo", compressedFile.name, requestFile)
+                    
+                    // Preparation of other required fields from current user data
+                    val name = (user.contact?.name ?: user.name ?: "User").toRequestBody("text/plain".toMediaTypeOrNull())
+                    val phone = (user.contact?.phone ?: "").toRequestBody("text/plain".toMediaTypeOrNull())
+                    val address = (user.contact?.address ?: "").toRequestBody("text/plain".toMediaTypeOrNull())
+                    val telegramId = (user.contact?.telegramChatId ?: "").toRequestBody("text/plain".toMediaTypeOrNull())
+                    
+                    val apiService = ApiClient.getApiService(context)
+                    val contactId = user.contact?.id ?: user.contactId ?: 0
+                    
+                    if (contactId == 0) {
+                        Toast.makeText(context, "ID Kontak tidak ditemukan", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+
+                    val response = apiService.updateContactPhoto(
+                        id = contactId,
+                        photo = photoPart,
+                        name = name,
+                        phone = phone,
+                        address = address,
+                        telegramChatId = telegramId,
+                        method = "PUT"
+                    )
+                    
+                    if (response.isSuccessful) {
+                        Toast.makeText(context, "Foto profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                        
+                        // 🟢 Use the updated contact data from response body directly
+                        val updateBody = response.body()
+                        if (updateBody != null) {
+                            val updatedUser = user.copy(contact = updateBody.data)
+                            onUserUpdate(updatedUser)
+                        } else {
+                            // Fallback to refresh if body is null
+                            val profileResponse = apiService.getUserProfile()
+                            profileResponse.user?.let { updatedUser -> onUserUpdate(updatedUser) }
+                        }
+                    } else {
+                        val errorBody = response.errorBody()?.string()
+                        Toast.makeText(context, "Gagal mengunggah: ${response.code()} $errorBody", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                } finally {
+                    isUploadingPhoto = false
+                }
+            }
+        }
+    }
 
     val contact = user.contact
     val employee = user.contact?.employee
     val warehouse = user.warehouse
-    val primaryCash = user.warehouse?.primaryCash
     val warning = employee?.warningActive
     val roleName = user.role?.toString() ?: "Staff"
     val displayName = contact?.name ?: user.name ?: "User"
+    val userPhotoUrl = user.contact?.contactPhotoUrl?.takeIf { it.isNotBlank() } ?: user.contact?.photo?.takeIf { it.isNotBlank() }
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
@@ -156,11 +235,25 @@ fun ProfileScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            "Profil Saya",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                            "Profile",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            )
                         )
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
+                    },
+                    actions = {
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
                 )
             },
             containerColor = Color.Transparent
@@ -194,21 +287,67 @@ fun ProfileScreen(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            // Avatar
-                            Surface(
-                                modifier = Modifier.size(68.dp),
-                                shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                shadowElevation = 6.dp,
-                                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = (displayName.ifBlank { "U" }).take(1).uppercase(),
-                                        style = MaterialTheme.typography.headlineMedium.copy(
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Black
-                                        )
+                            // Avatar with Upload functionality
+                            Box(contentAlignment = Alignment.BottomEnd) {
+                                Surface(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .clickable { photoPickerLauncher.launch("image/*") },
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shadowElevation = 4.dp,
+                                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        if (isUploadingPhoto) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                color = Color.White,
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else if (!userPhotoUrl.isNullOrEmpty()) {
+                                            val url = when {
+                                                userPhotoUrl.startsWith("http") -> userPhotoUrl
+                                                userPhotoUrl.startsWith("/") -> "https://sandbox.three-komunika.com$userPhotoUrl"
+                                                userPhotoUrl.startsWith("storage/") -> "https://sandbox.three-komunika.com/$userPhotoUrl"
+                                                else -> "https://sandbox.three-komunika.com/storage/$userPhotoUrl"
+                                            }
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(LocalContext.current)
+                                                    .data(url)
+                                                    .crossfade(true)
+                                                    .allowHardware(false)
+                                                    .build(),
+                                                contentDescription = "Foto Profil",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                text = (displayName.ifBlank { "U" }).take(1).uppercase(),
+                                                style = MaterialTheme.typography.headlineMedium.copy(
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Black
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Camera Icon Badge
+                                Surface(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .offset(x = 4.dp, y = 4.dp),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.surface)
+                                ) {
+                                    Icon(
+                                        Icons.Default.CameraAlt,
+                                        contentDescription = "Ubah Foto",
+                                        modifier = Modifier.padding(4.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimary
                                     )
                                 }
                             }
@@ -301,32 +440,12 @@ fun ProfileScreen(
                                     )
                                     
                                     if (user.emailVerifiedAt != null) {
-                                        Surface(
-                                            color = Color(0xFFE0F2FE),
-                                            shape = RoundedCornerShape(6.dp),
-                                            modifier = Modifier.padding(start = 2.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Verified,
-                                                    contentDescription = "Verified",
-                                                    modifier = Modifier.size(10.dp),
-                                                    tint = Color(0xFF0284C7)
-                                                )
-                                                Spacer(modifier = Modifier.width(3.dp))
-                                                Text(
-                                                    text = "Verified",
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        color = Color(0xFF0284C7)
-                                                    )
-                                                )
-                                            }
-                                        }
+                                        Icon(
+                                            Icons.Default.Verified,
+                                            contentDescription = "Verified",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = Color(0xFF0EA5E9)
+                                        )
                                     }
                                 }
                             }
@@ -444,8 +563,10 @@ fun ProfileScreen(
                                 .fillMaxWidth()
                                 .padding(top = 16.dp),
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1F2)),
-                            border = BorderStroke(1.dp, Color(0xFFFECDD3))
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -455,13 +576,13 @@ fun ProfileScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .background(Color(0xFFFFE4E6), RoundedCornerShape(10.dp)),
+                                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), RoundedCornerShape(10.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         Icons.Default.Warning,
                                         contentDescription = null,
-                                        tint = Color(0xFFE11D48),
+                                        tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -475,18 +596,18 @@ fun ProfileScreen(
                                             text = "SANKSI AKTIF: ${w.level ?: "-"}",
                                             style = MaterialTheme.typography.labelMedium.copy(
                                                 fontWeight = FontWeight.Black,
-                                                color = Color(0xFF9F1239)
+                                                color = MaterialTheme.colorScheme.error
                                             )
                                         )
                                         Surface(
-                                            color = Color(0xFFFFE4E6),
+                                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
                                             shape = RoundedCornerShape(6.dp)
                                         ) {
                                             Text(
                                                 text = "s/d ${formatShortDate(w.expiredDate)}",
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFFE11D48)
+                                                    color = MaterialTheme.colorScheme.error
                                                 ),
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
@@ -495,7 +616,7 @@ fun ProfileScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Alasan: ${w.reason ?: "-"}",
-                                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFBE123C))
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onErrorContainer)
                                     )
                                 }
                             }
@@ -514,7 +635,7 @@ fun ProfileScreen(
                     InfoRowItem(
                         icon = Icons.Default.Cake,
                         label = "Tempat, Tgl Lahir",
-                        value = "${employee?.placeOfBirth ?: "-"}, ${formatShortDate(employee?.birthDate)}"
+                        value = "${employee?.placeOfBirth ?: "-"}, ${formatLongDate(employee?.birthDate)}"
                     )
                     ProfileDivider()
                     InfoRowItem(
@@ -532,7 +653,7 @@ fun ProfileScreen(
                     InfoRowItem(
                         icon = Icons.Default.CalendarToday,
                         label = "Tanggal Bergabung",
-                        value = formatShortDate(employee?.hireDate)
+                        value = "${formatShortDate(employee?.hireDate)} (${DateUtils.calculateWorkDuration(employee?.hireDate)})"
                     )
                     ProfileDivider()
                     InfoRowItem(
@@ -608,50 +729,19 @@ fun ProfileScreen(
                     )
                 }
 
-                // ─── 5. PRIMARY CASH & LIMIT ───
-                if (primaryCash != null) {
+                // ─── 5. RECEIVABLES (HUTANG PIUTANG) ───
+                val empReceivable = contact?.employeeReceivablesSum?.total ?: 0.0
+                val instReceivable = contact?.installmentReceivablesSum?.total ?: 0.0
+                val totalReceivables = empReceivable + instReceivable
+                
+                if (totalReceivables > 0) {
                     Spacer(modifier = Modifier.height(20.dp))
 
                     ProfileSectionHeader(
-                        title = "Kas Utama",
-                        icon = Icons.Default.AccountBalanceWallet
+                        title = "Hutang Piutang",
+                        icon = Icons.Default.Wallet
                     )
                     InfoSectionCard {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                        RoundedCornerShape(12.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.AccountBalanceWallet,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = "Akun Kas (${primaryCash.code ?: "-"})",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                                )
-                                Text(
-                                    text = primaryCash.name ?: "-",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
                         Surface(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
                             shape = RoundedCornerShape(14.dp),
@@ -665,14 +755,14 @@ fun ProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "Sisa Saldo",
+                                    "Total Sisa Piutang",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Medium
                                     )
                                 )
                                 Text(
-                                    formatRupiah(primaryCash.stBalance),
+                                    formatRupiah(totalReceivables.toLong()),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Black,
                                         color = MaterialTheme.colorScheme.primary
@@ -681,45 +771,21 @@ fun ProfileScreen(
                             }
                         }
 
-                        val currentLimit = primaryCash.limit
-                        if (currentLimit != null && currentLimit > 0) {
-                            Spacer(modifier = Modifier.height(14.dp))
-                            val usedPercentage = ((primaryCash.stBalance ?: 0L).toFloat() / currentLimit.toFloat()).coerceIn(0f, 1f)
-
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        "Limit: ${formatRupiah(currentLimit)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        "${(usedPercentage * 100).toInt()}% Terpakai",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (usedPercentage > 0.8f) Color(0xFFE11D48) else MaterialTheme.colorScheme.primary
-                                        )
-                                    )
-                                }
-
-                                LinearProgressIndicator(
-                                    progress = { usedPercentage },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(CircleShape),
-                                    color = if (usedPercentage > 0.8f) Color(0xFFE11D48) else MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        InfoRowItem(
+                            icon = Icons.Default.Money,
+                            label = "Piutang Kasbon / Langsung",
+                            value = formatRupiah(empReceivable.toLong())
+                        )
+                        ProfileDivider()
+                        InfoRowItem(
+                            icon = Icons.Default.AccountBalanceWallet,
+                            label = "Piutang Cicilan",
+                            value = formatRupiah(instReceivable.toLong())
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
 
                 // ─── 6. ACCOUNT SYSTEM DETAILS ───
                 ProfileSectionHeader(
@@ -744,10 +810,10 @@ fun ProfileScreen(
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color(0xFFFFF1F2),
-                        contentColor = Color(0xFFE11D48)
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.error
                     ),
-                    border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
                     enabled = !isLoggingOut
                 ) {
                     Icon(

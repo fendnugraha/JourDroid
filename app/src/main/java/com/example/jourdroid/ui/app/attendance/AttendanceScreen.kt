@@ -172,10 +172,10 @@ fun AttendanceScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Presensi Kehadiran", fontWeight = FontWeight.Bold, color = Color.White) },
+                    title = { Text("Absensi", fontWeight = FontWeight.Bold, color = Color.White) },
                     actions = {
                         IconButton(onClick = onLogout) {
-                            Icon(Icons.AutoMirrored.Filled.Logout, "Logout", tint = Color(0xFFF87171))
+                            Icon(Icons.AutoMirrored.Filled.Logout, "Keluar", tint = Color(0xFFF87171))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -344,7 +344,7 @@ fun AttendanceScreen(
                     if (capturedPhotoUri != null) {
                         Image(
                             painter = rememberAsyncImagePainter(capturedPhotoUri),
-                            contentDescription = "Preview",
+                            contentDescription = "Pratinjau",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -460,12 +460,12 @@ fun AttendanceScreen(
                                         warehouseId = user.warehouseId,
                                         photo = null,
                                         timeIn = "--:--",
-                                        date = "Today",
+                                        date = "Hari Ini",
                                         note = null,
                                         longitude = null,
                                         latitude = null,
-                                        approvalStatus = "Already Checked In",
-                                        warehouseName = user.warehouse?.name ?: "Warehouse"
+                                        approvalStatus = "Sudah Absen",
+                                        warehouseName = user.warehouse?.name ?: "Gudang"
                                     ))
                                     return@launch
                                 }
@@ -478,7 +478,7 @@ fun AttendanceScreen(
                                 val lat = currentLocation!!.latitude.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                                 val lng = currentLocation!!.longitude.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                                 val warehouseId = (nearestWarehouse?.id ?: 0).toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                                val role = (user.role?.toString() ?: "Staff").toRequestBody("text/plain".toMediaTypeOrNull())
+                                val role = (user.role?.toString() ?: "Staf").toRequestBody("text/plain".toMediaTypeOrNull())
                                 val timeIn = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date()).toRequestBody("text/plain".toMediaTypeOrNull())
 
                                 val response = apiService.createAttendance(
@@ -503,7 +503,7 @@ fun AttendanceScreen(
                                         note = null,
                                         longitude = currentLocation!!.longitude.toString(),
                                         latitude = currentLocation!!.latitude.toString(),
-                                        approvalStatus = "Pending",
+                                        approvalStatus = "Menunggu",
                                         warehouseName = nearestWarehouse?.name
                                     )
                                     onSuccess(attendanceData)

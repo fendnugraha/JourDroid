@@ -1,5 +1,6 @@
 package com.example.jourdroid.ui.app.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -24,13 +25,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.CashBankBalanceItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.NotificationBadge
+import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.DateUtils
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import kotlinx.coroutines.launch
@@ -88,7 +94,7 @@ fun DashboardScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
             MaterialTheme.colorScheme.surface
         )
     )
@@ -105,26 +111,20 @@ fun DashboardScreen(
                     title = { 
                         Text(
                             "Dashboard", 
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            )
                         ) 
                     },
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
+                    },
                     actions = {
-                        IconButton(onClick = onNavigateToNotifications) {
-                            BadgedBox(
-                                badge = {
-                                    if (unreadNotificationCount > 0) {
-                                        Badge {
-                                            Text(if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString())
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (unreadNotificationCount > 0) Icons.Default.Notifications else Icons.Default.NotificationsNone,
-                                    contentDescription = "Notifications"
-                                )
-                            }
-                        }
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
@@ -252,11 +252,11 @@ fun SummaryCard(
 ) {
     ElevatedCard(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -264,33 +264,33 @@ fun SummaryCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(36.dp)
                         .background(color.copy(alpha = 0.1f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(18.dp),
                         tint = color
                     )
                 }
                 Text(
-                    text = title,
+                    text = title.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
                 )
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Text(
                 text = formatRupiah(amount),
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 15.sp,
                     letterSpacing = (-0.5).sp
                 ),
                 maxLines = 1,

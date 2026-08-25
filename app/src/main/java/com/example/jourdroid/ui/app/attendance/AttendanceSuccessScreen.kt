@@ -54,7 +54,7 @@ fun AttendanceSuccessScreen(
         modifier = Modifier.background(gradient),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Attendance Receipt", fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text("Bukti Presensi", fontWeight = FontWeight.Bold, color = Color.White) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
@@ -75,7 +75,7 @@ fun AttendanceSuccessScreen(
                         setContent {
                             AttendanceTicket(
                                 userName = userName,
-                                warehouseName = attendanceData.warehouseName ?: "Unknown Warehouse",
+                                warehouseName = attendanceData.warehouseName ?: "Gudang Tidak Diketahui",
                                 data = attendanceData,
                                 displayTime = displayTime,
                                 displayDate = displayDate
@@ -130,9 +130,9 @@ fun AttendanceSuccessScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null)
+                    Icon(Icons.Default.Share, contentDescription = "Bagikan")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Share", fontWeight = FontWeight.Bold)
+                    Text("Bagikan", fontWeight = FontWeight.Bold)
                 }
 
                 // Done Button
@@ -144,16 +144,16 @@ fun AttendanceSuccessScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
+                    Icon(Icons.Default.Check, contentDescription = "Selesai")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Done", fontWeight = FontWeight.Bold)
+                    Text("Selesai", fontWeight = FontWeight.Bold)
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
             
             Text(
-                text = "Thank you for checking in today!",
+                text = "Terima kasih sudah absen hari ini!",
                 color = Color.Gray,
                 fontSize = 12.sp
             )

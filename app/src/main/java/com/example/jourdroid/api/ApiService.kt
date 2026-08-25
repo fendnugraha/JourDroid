@@ -27,7 +27,7 @@ interface ApiService {
         @Path("id") id: String
     ): retrofit2.Response<Unit>
 
-    @GET("api/android/user-profile")
+    @GET("api/user-profile")
     suspend fun getUserProfile(): LoginResponse
 
     @FormUrlEncoded
@@ -170,6 +170,18 @@ interface ApiService {
         @Part("role") role: RequestBody,
         @Part("time_in") timeIn: RequestBody
     ): retrofit2.Response<com.example.jourdroid.data.AttendanceResponse>
+
+    @Multipart
+    @POST("api/contacts/{id}")
+    suspend fun updateContactPhoto(
+        @Path("id") id: Int,
+        @Part photo: MultipartBody.Part?,
+        @Part("name") name: RequestBody,
+        @Part("phone") phone: RequestBody?,
+        @Part("address") address: RequestBody?,
+        @Part("telegram_chat_id") telegramChatId: RequestBody?,
+        @Query("_method") method: String = "PUT"
+    ): retrofit2.Response<ContactUpdateResponse>
 
 }
 

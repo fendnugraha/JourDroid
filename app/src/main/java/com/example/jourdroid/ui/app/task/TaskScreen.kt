@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import com.example.jourdroid.api.ApiClient
 import com.example.jourdroid.data.DeliveryItem
 import com.example.jourdroid.data.UserData
+import com.example.jourdroid.ui.component.NotificationBadge
+import com.example.jourdroid.ui.component.ProfileAvatar
 import com.example.jourdroid.utils.FormatterUtils.formatRupiah
 import com.example.jourdroid.utils.LocationHelper
 import com.example.jourdroid.utils.LocationUtils
@@ -40,7 +42,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskScreen(
-    user: UserData
+    user: UserData,
+    unreadNotificationCount: Int = 0,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -135,7 +139,7 @@ fun TaskScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
             MaterialTheme.colorScheme.surface
         )
     )
@@ -151,9 +155,21 @@ fun TaskScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            "Delivery Task", 
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                            "Tugas", 
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            )
                         ) 
+                    },
+                    navigationIcon = {
+                        ProfileAvatar(user = user)
+                    },
+                    actions = {
+                        NotificationBadge(
+                            unreadCount = unreadNotificationCount,
+                            onClick = onNavigateToNotifications
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
@@ -170,12 +186,12 @@ fun TaskScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 20.dp)
                 ) {
                     // ─── STATISTICS HEADER ───
                     TaskStatsHeader(deliveries = deliveries)
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     if (isLoading && deliveries.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -255,24 +271,24 @@ fun TaskStatsHeader(deliveries: List<DeliveryItem>) {
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatCard(
             count = pendingCount, 
             label = "Pending", 
-            color = Color(0xFFFFA000), 
+            color = Color(0xFF64748B), 
             modifier = Modifier.weight(1f)
         )
         StatCard(
             count = inTransitCount, 
             label = "Proses", 
-            color = MaterialTheme.colorScheme.primary, 
+            color = Color(0xFF6366F1), 
             modifier = Modifier.weight(1f)
         )
         StatCard(
             count = deliveredCount, 
             label = "Selesai", 
-            color = Color(0xFF4CAF50), 
+            color = Color(0xFF10B981), 
             modifier = Modifier.weight(1f)
         )
     }
@@ -281,27 +297,34 @@ fun TaskStatsHeader(deliveries: List<DeliveryItem>) {
 @Composable
 fun StatCard(count: Int, label: String, color: Color, modifier: Modifier = Modifier) {
     Surface(
-        color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
         modifier = modifier,
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
+        shadowElevation = 2.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(color, CircleShape)
+                    .align(Alignment.End)
+            )
             Text(
                 text = count.toString(),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    color = color
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = color.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -333,42 +356,49 @@ fun TaskItemCard(
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             // Header: Invoice & Priority Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = item.invoice ?: "INV-####",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                Column {
+                    Text(
+                        text = item.invoice ?: "INV-####",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
-                )
+                    Text(
+                        text = "Pengiriman Paket",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 // Priority Badge (Compact)
                 val priority = item.priority?.lowercase() ?: "low"
                 val priorityColor = when (priority) {
-                    "high" -> Color(0xFFFF9800)
-                    "urgent" -> Color(0xFFF44336)
+                    "high" -> Color(0xFFF59E0B)
+                    "urgent" -> Color(0xFFEF4444)
                     else -> MaterialTheme.colorScheme.outline
                 }
                 
                 if (priority != "low") {
                     Surface(
                         color = priorityColor.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, priorityColor.copy(alpha = 0.3f))
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, priorityColor.copy(alpha = 0.2f))
                     ) {
                         Text(
                             text = priority.uppercase(),
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Black,
                                 color = priorityColor,
@@ -379,24 +409,37 @@ fun TaskItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Compact Route info
+            // Route info - Removed Origin
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Store, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = item.sourceAccount?.warehouse?.name ?: "Origin",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium)
-                )
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.padding(horizontal = 8.dp).size(12.dp), tint = MaterialTheme.colorScheme.outline)
-                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = item.destinationAccount?.warehouse?.name ?: "Destination",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.weight(1f)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(20.dp), 
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "TUJUAN PENGIRIMAN",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = item.destinationAccount?.warehouse?.name ?: "Alamat Tujuan",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 
                 // Map Navigation Button
                 if (destLat != null && destLng != null) {
@@ -407,38 +450,53 @@ fun TaskItemCard(
                             intent.setPackage("com.google.android.apps.maps")
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape)
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                     ) {
-                        Icon(Icons.Default.Navigation, contentDescription = "Maps", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Icon(
+                            Icons.Default.Navigation, 
+                            contentDescription = "Maps", 
+                            modifier = Modifier.size(20.dp), 
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            // ─── STATUS STEPPER (Compact) ───
+            // ─── STATUS STEPPER (Modern) ───
             DeliveryStatusStepper(status = item.status.lowercase())
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Distance / ETA small text
             distanceInfo?.let { (dist, eta) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "$dist • Estimasi $eta menit",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Timer, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "$dist • Estimasi $eta menit",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
-                    )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             // Footer: Amount & Action
             Row(
@@ -447,37 +505,57 @@ fun TaskItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = "NILAI", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "NILAI PAKET", 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(
                         text = formatRupiah(item.amount),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Black, 
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
                 }
                 
-                // Action Button (Compact)
+                // Action Button (Professional)
                 when (item.status.lowercase()) {
                     "pending" -> {
                         Button(
                             onClick = { onAction("process") },
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Text("PROSES", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                            Text("PROSES", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black))
                         }
                     }
                     "processing", "in_transit" -> {
                         Button(
                             onClick = { onAction("complete") },
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
                         ) {
-                            Text("TERIMA", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                            Text("TERIMA", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black))
                         }
                     }
                     "delivered" -> {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(24.dp))
+                        Surface(
+                            color = Color(0xFF10B981).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("SELESAI", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, color = Color(0xFF10B981)))
+                            }
+                        }
                     }
                 }
             }
@@ -498,7 +576,7 @@ fun DeliveryStatusStepper(status: String) {
     val inactiveColor = MaterialTheme.colorScheme.surfaceVariant
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Step 1
@@ -508,29 +586,29 @@ fun DeliveryStatusStepper(status: String) {
         StepperLine(isActive = step >= 2, color = activeColor, inactiveColor = inactiveColor, modifier = Modifier.weight(1f))
         
         // Step 2
-        StepperNode(icon = Icons.Default.LocalShipping, isActive = step >= 2, activeColor = activeColor, inactiveColor = inactiveColor)
+        StepperNode(icon = Icons.Default.LocalShipping, isActive = step >= 2, activeColor = activeColor)
         
         // Line 2
         StepperLine(isActive = step >= 3, color = activeColor, inactiveColor = inactiveColor, modifier = Modifier.weight(1f))
         
         // Step 3
-        StepperNode(icon = Icons.Default.Home, isActive = step >= 3, activeColor = activeColor, inactiveColor = inactiveColor)
+        StepperNode(icon = Icons.Default.Home, isActive = step >= 3, activeColor = activeColor)
     }
 }
 
 @Composable
-fun StepperNode(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, activeColor: Color, inactiveColor: Color = Color.LightGray) {
+fun StepperNode(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, activeColor: Color) {
     Box(
         modifier = Modifier
-            .size(28.dp)
-            .background(if (isActive) activeColor else inactiveColor.copy(alpha = 0.2f), CircleShape),
+            .size(32.dp)
+            .background(if (isActive) activeColor else MaterialTheme.colorScheme.surfaceVariant, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = if (isActive) Color.White else inactiveColor
+            modifier = Modifier.size(16.dp),
+            tint = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )
     }
 }
